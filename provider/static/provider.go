@@ -1,6 +1,7 @@
 package static
 
 import (
+	"bytes"
 	stdjson "encoding/json"
 
 	"github.com/upfluence/cfg/provider"
@@ -14,5 +15,5 @@ func NewProvider(d interface{}) (provider.Provider, error) {
 		return nil, err
 	}
 
-	return json.NewProviderFromBuffer(buf)
+	return json.NewProviderFromReader(bytes.NewReader(buf))
 }
