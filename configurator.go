@@ -9,7 +9,7 @@ import (
 
 	"github.com/upfluence/cfg/provider"
 	"github.com/upfluence/cfg/provider/env"
-	"github.com/upfluence/pkg/log"
+	"github.com/upfluence/cfg/provider/flags"
 )
 
 var (
@@ -26,7 +26,9 @@ type configurator struct {
 }
 
 func NewDefaultConfigurator(providers ...provider.Provider) Configurator {
-	return NewConfigurator(append(providers, env.NewDefaultProvider())...)
+	return NewConfigurator(
+		append(providers, env.NewDefaultProvider(), flags.NewDefaultProvider())...,
+	)
 }
 
 func NewConfigurator(providers ...provider.Provider) Configurator {
@@ -83,12 +85,6 @@ func (c *configurator) populate(ctx context.Context, p provider.Provider, vVal r
 
 			c.populate(ctx, p, v, append(ns, n))
 		} else if s != nil {
-			log.Debugf(
-				"Populate(field: %s, provider: %+v)",
-				strings.Join(append(ns, n), "."),
-				p,
-			)
-
 			v, ok, err := p.Provide(ctx, strings.Join(append(ns, n), "."))
 
 			if err != nil {
@@ -103,8 +99,6 @@ func (c *configurator) populate(ctx context.Context, p provider.Provider, vVal r
 			if !ok {
 				continue
 			}
-
-			log.Debugf("Populate(field: %s, provider: %+v): %s", field.Name, p, v)
 
 			if err := s.set(v, vVal.Interface()); err != nil {
 				return err

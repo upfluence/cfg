@@ -7,6 +7,8 @@ import (
 	"os"
 	"reflect"
 	"testing"
+
+	"github.com/upfluence/cfg/provider"
 )
 
 type mockProvider struct {
@@ -28,7 +30,7 @@ func (p *mockProvider) Provide(_ context.Context, k string) (string, bool, error
 type testCase struct {
 	caseName string
 	input    interface{}
-	provider Provider
+	provider provider.Provider
 
 	dataAssertion func(*testing.T, interface{})
 	errAssertion  func(*testing.T, error)
