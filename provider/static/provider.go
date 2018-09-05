@@ -2,18 +2,22 @@ package static
 
 import (
 	"bytes"
-	stdjson "encoding/json"
+	"encoding/json"
 
 	"github.com/upfluence/cfg/provider"
-	"github.com/upfluence/cfg/provider/json"
+	pjson "github.com/upfluence/cfg/provider/json"
 )
 
 func NewProvider(d interface{}) (provider.Provider, error) {
-	var buf, err = stdjson.Marshal(d)
+	var (
+		buf bytes.Buffer
 
-	if err != nil {
+		enc = json.NewEncoder(&buf)
+	)
+
+	if err := enc.Encode(d); err != nil {
 		return nil, err
 	}
 
-	return json.NewProviderFromReader(bytes.NewReader(buf))
+	return pjson.NewProviderFromReader(&buf)
 }
