@@ -8,7 +8,7 @@ import (
 	pjson "github.com/upfluence/cfg/provider/json"
 )
 
-func NewProvider(d interface{}) (provider.Provider, error) {
+func NewProvider(d interface{}) provider.Provider {
 	var (
 		buf bytes.Buffer
 
@@ -16,7 +16,7 @@ func NewProvider(d interface{}) (provider.Provider, error) {
 	)
 
 	if err := enc.Encode(d); err != nil {
-		return nil, err
+		return provider.ProvideError("static", err)
 	}
 
 	return pjson.NewProviderFromReader(&buf)

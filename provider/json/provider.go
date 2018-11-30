@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io"
 	"strings"
+
+	"github.com/upfluence/cfg/provider"
 )
 
 var ErrJSONMalformated = errors.New("cfg/provider/json: Payload not formatted correctly")
@@ -15,14 +17,14 @@ type Provider struct {
 	store map[string]interface{}
 }
 
-func NewProviderFromReader(r io.Reader) (*Provider, error) {
+func NewProviderFromReader(r io.Reader) provider.Provider {
 	var v = make(map[string]interface{})
 
 	if err := json.NewDecoder(r).Decode(&v); err != nil {
-		return nil, err
+		return provider.ProvideError("json", err)
 	}
 
-	return &Provider{store: v}, nil
+	return &Provider{store: v}
 }
 
 func (*Provider) StructTag() string { return "json" }
@@ -44,11 +46,16 @@ func (p *Provider) Provide(_ context.Context, v string) (string, bool, error) {
 
 		if i == len(splittedKey)-1 {
 			res = t
-		} else if res, ok := t.(map[string]interface{}); ok {
-			cur = res
-		} else {
+			continue
+		}
+
+		res, ok := t.(map[string]interface{})
+
+		if !ok {
 			return "", false, ErrJSONMalformated
 		}
+
+		cur = res
 	}
 
 	return fmt.Sprintf("%v", res), true, nil

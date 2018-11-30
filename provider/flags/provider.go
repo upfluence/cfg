@@ -3,6 +3,8 @@ package flags
 import (
 	"context"
 	"os"
+
+	"github.com/upfluence/cfg/provider"
 )
 
 type Provider struct {
@@ -59,11 +61,11 @@ func parseFlags(args []string) map[string]string {
 	return res
 }
 
-func NewDefaultProvider() *Provider {
+func NewDefaultProvider() provider.Provider {
 	return NewProvider(os.Args[1:])
 }
 
-func NewProvider(args []string) *Provider {
+func NewProvider(args []string) provider.Provider {
 	return &Provider{store: parseFlags(args)}
 }
 
