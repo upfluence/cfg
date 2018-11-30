@@ -49,7 +49,7 @@ func (c *configurator) Populate(ctx context.Context, out interface{}) error {
 	}
 
 	for _, p := range c.providers {
-		if err := c.populate(ctx, p, vVal, []string{}); err != nil {
+		if err := c.populate(ctx, p, vVal, nil); err != nil {
 			return err
 		}
 	}
@@ -83,7 +83,11 @@ func (c *configurator) populate(ctx context.Context, p provider.Provider, vVal r
 				v.Set(reflect.New(field.Type.Elem()))
 			}
 
-			c.populate(ctx, p, v, append(ns, n))
+			if n != "" {
+				ns = append(ns, n)
+			}
+
+			c.populate(ctx, p, v, ns)
 		} else if s != nil {
 			v, ok, err := p.Provide(ctx, strings.Join(append(ns, n), "."))
 
