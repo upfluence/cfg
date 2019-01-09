@@ -26,6 +26,11 @@ func TestParseFlags(t *testing.T) {
 			out:  map[string]string{"foo": "true", "bar": "true", "buz": "true"},
 		},
 		{
+			name: "has no orphan flags",
+			in:   []string{"--no-foo", "--no-bar", "--no-buz"},
+			out:  map[string]string{"foo": "false", "bar": "false", "buz": "false"},
+		},
+		{
 			name: "has multiple values flags",
 			in:   []string{"--foo", "bar", "buz"},
 			out:  map[string]string{"foo": "bar"},
