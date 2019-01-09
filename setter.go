@@ -200,15 +200,15 @@ type floatParser struct {
 	transformer intTransformer
 }
 
-func (s *floatParser) parse(value string, ptr bool) (interface{}, error) {
-	var v, err = strconv.ParseFloat(value, 10, 0)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return s.transformer(v, ptr), nil
-}
+//func (s *floatParser) parse(value string, ptr bool) (interface{}, error) {
+//	var v, err = strconv.ParseFloat(value, )
+//
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	return s.transformer(v, ptr), nil
+//}
 
 var structTransformers = map[reflect.Kind]structTransformer{
 	reflect.Struct: func(v interface{}, ptr bool) interface{} {
