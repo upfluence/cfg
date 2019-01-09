@@ -40,6 +40,11 @@ func TestParseFlags(t *testing.T) {
 			in:   []string{"-foo", "bar", "buz"},
 			out:  map[string]string{"foo": "bar"},
 		},
+		{
+			name: "has multiple type format",
+			in:   []string{"--foo", "--no-bar", "--buz", "biz", "foo", "--foobar", "foo"},
+			out:  map[string]string{"foo": "true", "bar": "false", "buz": "biz", "foobar": "foo"},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			if out := parseFlags(tt.in); !reflect.DeepEqual(out, tt.out) {
