@@ -37,14 +37,14 @@ func (*defaultSetterFactory) buildParser(k reflect.Kind) parser {
 	switch k {
 	case reflect.String:
 		return &stringParser{}
-	case reflect.Int, reflect.Int64:
-		return &int64Parser{transformer: intTransformers[k]}
-	case reflect.Int32:
-		return &int32Parser{transformer: intTransformers[k]}
-		//	case reflect.Struct:
-		//		return &structParser{transformer: structTransformers[k]}
+	case reflect.Int, reflect.Int64, reflect.Int32:
+		return &intParser{transformer: intTransformers[k]}
+	case reflect.Struct:
+		return &structParser{transformer: structTransformers[k]}
 	case reflect.Bool:
 		return &boolParser{}
+		//case reflect.Float32, reflect.Float64:
+		//	return &floatParser{transformer: floatTransformers[k]}
 	}
 
 	return nil
@@ -161,11 +161,11 @@ var intTransformers = map[reflect.Kind]intTransformer{
 	},
 }
 
-type int64Parser struct {
+type intParser struct {
 	transformer intTransformer
 }
 
-func (s *int64Parser) parse(value string, ptr bool) (interface{}, error) {
+func (s *intParser) parse(value string, ptr bool) (interface{}, error) {
 	var v, err = strconv.ParseInt(value, 10, 0)
 
 	if err != nil {
@@ -175,12 +175,33 @@ func (s *int64Parser) parse(value string, ptr bool) (interface{}, error) {
 	return s.transformer(v, ptr), nil
 }
 
-type int32Parser struct {
+type floatTransformer func(int64, bool) interface{}
+
+var floatTransformers = map[reflect.Kind]floatTransformer{
+	reflect.Float64: func(v int64, ptr bool) interface{} {
+		if ptr {
+			x := float64(v)
+			return &x
+		}
+
+		return int(v)
+	},
+	reflect.Float32: func(v int64, ptr bool) interface{} {
+		if ptr {
+			x := v
+			return &x
+		}
+
+		return v
+	},
+}
+
+type floatParser struct {
 	transformer intTransformer
 }
 
-func (s *int32Parser) parse(value string, ptr bool) (interface{}, error) {
-	var v, err = strconv.ParseInt(value, 10, 0)
+func (s *floatParser) parse(value string, ptr bool) (interface{}, error) {
+	var v, err = strconv.ParseFloat(value, 10, 0)
 
 	if err != nil {
 		return nil, err
@@ -189,18 +210,18 @@ func (s *int32Parser) parse(value string, ptr bool) (interface{}, error) {
 	return s.transformer(v, ptr), nil
 }
 
-//var structTransformers = map[reflect.Kind]structTransformer{
-//	reflect.Struct: func(v interface{}, ptr bool) interface{} {
-//		return v
-//	},
-//}
-//
-//type structTransformer func(interface{}, bool) interface{}
-//
-//type structParser struct {
-//	transformer structTransformer
-//}
-//
-//func (s *structParser) parse(value string, ptr bool) (interface{}, error) {
-//	return s.transformer(value, ptr), nil
-//}
+var structTransformers = map[reflect.Kind]structTransformer{
+	reflect.Struct: func(v interface{}, ptr bool) interface{} {
+		return v
+	},
+}
+
+type structTransformer func(interface{}, bool) interface{}
+
+type structParser struct {
+	transformer structTransformer
+}
+
+func (s *structParser) parse(value string, ptr bool) (interface{}, error) {
+	return s.transformer(value, ptr), nil
+}
