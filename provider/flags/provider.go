@@ -39,12 +39,13 @@ func parseFlags(args []string) map[string]string {
 			if strings.HasPrefix(v, "no-") && len(v) > 3 {
 				key = strings.TrimPrefix(v, "no-")
 				res[key] = "false"
-			} else {
-				key = v
-				res[key] = "true"
+				inParam = false
+				continue
 			}
-
+			key = v
+			res[key] = "true"
 			inParam = true
+
 		} else if len(v) > 0 && inParam {
 			res[key] = v
 			inParam = false

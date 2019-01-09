@@ -83,6 +83,13 @@ $ ./example --arg1 foo --arg2 bar
 Arg1: foo, Arg2: bar
 ```
 
+* `flags:booleans`:
+
+```
+$ ./example --arg1 --no-arg2
+Arg1: TRUE, Arg2: FALSE
+```
+
 ## Roadmap
 
 So far the implementation is pretty minimal. There is two main
