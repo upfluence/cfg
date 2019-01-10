@@ -36,16 +36,17 @@ func parseFlags(args []string) map[string]string {
 
 	for _, arg := range args {
 		if v, ok := parseArg(arg); ok {
-			if strings.HasPrefix(v, "no-") && len(v) > 3 {
-				key = strings.TrimPrefix(v, "no-")
-				res[key] = "false"
-				inParam = false
-				continue
-			}
 			key = v
-			res[key] = "true"
+			val := "true"
 			inParam = true
 
+			if strings.HasPrefix(v, "no-") && len(v) > 3 {
+				key = strings.TrimPrefix(v, "no-")
+				val = "false"
+				inParam = false
+			}
+
+			res[key] = val
 		} else if len(v) > 0 && inParam {
 			res[key] = v
 			inParam = false
