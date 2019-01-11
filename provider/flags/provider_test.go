@@ -47,9 +47,13 @@ func TestParseFlags(t *testing.T) {
 		{
 			name: "has multiple type format (1)",
 			in: []string{
-				"--foo", "--no-bar",
-				"--buz", "biz", "foo",
-				"--foobar", "foo",
+				"--foo",
+				"--no-bar",
+				"--buz",
+				"biz",
+				"foo",
+				"--foobar",
+				"foo",
 			},
 			out: map[string]string{
 				"foo":    "true",
