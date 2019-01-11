@@ -2,6 +2,7 @@ package cfg
 
 import (
 	"fmt"
+	"math"
 	"reflect"
 	"strconv"
 	"strings"
@@ -132,32 +133,81 @@ func (*stringParser) parse(v string, ptr bool) (interface{}, error) {
 	return v, nil
 }
 
-type intTransformer func(int64, bool) interface{}
+type intTransformer func(int64, bool) (interface{}, error)
 
 var intTransformers = map[reflect.Kind]intTransformer{
-	reflect.Int: func(v int64, ptr bool) interface{} {
+	reflect.Int: func(v int64, ptr bool) (interface{}, error) {
+		const (
+			MAXUNINT = ^uint(0)
+			MAXRANGE = int64(int(MAXUNINT >> 1))
+			MINRANGE = int64(-int(MAXRANGE) - 1)
+		)
+		if v >= MINRANGE && v <= MAXRANGE {
+			return v, fmt.Errorf(
+				"floatTransformers error: range -> %f (reflect.Int)", v)
+		}
 		if ptr {
 			x := int(v)
-			return &x
+			return &x, nil
 		}
 
-		return int(v)
+		return int(v), nil
 	},
-	reflect.Int64: func(v int64, ptr bool) interface{} {
+	reflect.Int64: func(v int64, ptr bool) (interface{}, error) {
 		if ptr {
 			x := v
-			return &x
+			return &x, nil
 		}
 
-		return v
+		return v, nil
 	},
-	reflect.Int32: func(v int64, ptr bool) interface{} {
+	reflect.Int32: func(v int64, ptr bool) (interface{}, error) {
+		const (
+			MINRANGE = int64(math.MinInt32)
+			MAXRANGE = int64(math.MaxInt32)
+		)
+		if v >= MINRANGE && v <= MAXRANGE {
+			return v, fmt.Errorf(
+				"floatTransformers error: range -> %f (reflect.Int32)", v)
+		}
 		if ptr {
 			x := int32(v)
-			return &x
+			return &x, nil
 		}
 
-		return int32(v)
+		return int32(v), nil
+	},
+	reflect.Int16: func(v int64, ptr bool) (interface{}, error) {
+		const (
+			MINRANGE = int64(math.MinInt16)
+			MAXRANGE = int64(math.MaxInt16)
+		)
+		if v >= MINRANGE && v <= MAXRANGE {
+			return v, fmt.Errorf(
+				"floatTransformers error: range -> %f (reflect.Int32)", v)
+		}
+		if ptr {
+			x := int16(v)
+			return &x, nil
+		}
+
+		return int16(v), nil
+	},
+	reflect.Int8: func(v int64, ptr bool) (interface{}, error) {
+		const (
+			MINRANGE = int64(math.MinInt8)
+			MAXRANGE = int64(math.MaxInt8)
+		)
+		if v >= MINRANGE && v <= MAXRANGE {
+			return v, fmt.Errorf(
+				"floatTransformers error: range -> %f (reflect.Int8)", v)
+		}
+		if ptr {
+			x := int8(v)
+			return &x, nil
+		}
+
+		return int8(v), nil
 	},
 }
 
@@ -166,33 +216,34 @@ type intParser struct {
 }
 
 func (s *intParser) parse(value string, ptr bool) (interface{}, error) {
-	var v, err = strconv.ParseInt(value, 10, 0)
-
-	if err != nil {
+	if v, err := strconv.ParseInt(value, 10, 64); err != nil {
 		return nil, err
+	} else {
+		return s.transformer(v, ptr)
 	}
-
-	return s.transformer(v, ptr), nil
 }
 
-type floatTransformer func(int64, bool) interface{}
+type floatTransformer func(float64, bool) (interface{}, error)
 
 var floatTransformers = map[reflect.Kind]floatTransformer{
-	reflect.Float64: func(v int64, ptr bool) interface{} {
-		if ptr {
-			x := float64(v)
-			return &x
-		}
-
-		return int(v)
-	},
-	reflect.Float32: func(v int64, ptr bool) interface{} {
+	reflect.Float64: func(v float64, ptr bool) (interface{}, error) {
 		if ptr {
 			x := v
-			return &x
+			return &x, nil
 		}
 
-		return v
+		return v, nil
+	},
+	reflect.Float32: func(v float64, ptr bool) (interface{}, error) {
+		if float64(math.MaxFloat32) < math.Abs(v) {
+			return v, fmt.Errorf("floatTransformers error: range -> %f", v)
+		}
+		if ptr {
+			x := float32(v)
+			return &x, nil
+		}
+
+		return float32(v), nil
 	},
 }
 
