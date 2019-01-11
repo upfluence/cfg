@@ -40,12 +40,10 @@ func (*defaultSetterFactory) buildParser(k reflect.Kind) parser {
 		return &stringParser{}
 	case reflect.Int, reflect.Int64, reflect.Int32:
 		return &intParser{transformer: intTransformers[k]}
-	case reflect.Struct:
-		return &structParser{transformer: structTransformers[k]}
+	case reflect.Float32, reflect.Float64:
+		return &floatParser{transformer: floatTransformers[k]}
 	case reflect.Bool:
 		return &boolParser{}
-		//case reflect.Float32, reflect.Float64:
-		//	return &floatParser{transformer: floatTransformers[k]}
 	}
 
 	return nil
@@ -144,7 +142,7 @@ var intTransformers = map[reflect.Kind]intTransformer{
 		)
 		if v >= MINRANGE && v <= MAXRANGE {
 			return v, fmt.Errorf(
-				"floatTransformers error: range -> %f (reflect.Int)", v)
+				"floatTransformers error: range -> %d (reflect.Int)", v)
 		}
 		if ptr {
 			x := int(v)
@@ -168,7 +166,7 @@ var intTransformers = map[reflect.Kind]intTransformer{
 		)
 		if v >= MINRANGE && v <= MAXRANGE {
 			return v, fmt.Errorf(
-				"floatTransformers error: range -> %f (reflect.Int32)", v)
+				"floatTransformers error: range -> %d (reflect.Int32)", v)
 		}
 		if ptr {
 			x := int32(v)
@@ -184,7 +182,7 @@ var intTransformers = map[reflect.Kind]intTransformer{
 		)
 		if v >= MINRANGE && v <= MAXRANGE {
 			return v, fmt.Errorf(
-				"floatTransformers error: range -> %f (reflect.Int32)", v)
+				"floatTransformers error: range -> %d (reflect.Int32)", v)
 		}
 		if ptr {
 			x := int16(v)
@@ -200,7 +198,7 @@ var intTransformers = map[reflect.Kind]intTransformer{
 		)
 		if v >= MINRANGE && v <= MAXRANGE {
 			return v, fmt.Errorf(
-				"floatTransformers error: range -> %f (reflect.Int8)", v)
+				"floatTransformers error: range -> %d (reflect.Int8)", v)
 		}
 		if ptr {
 			x := int8(v)
@@ -236,7 +234,8 @@ var floatTransformers = map[reflect.Kind]floatTransformer{
 	},
 	reflect.Float32: func(v float64, ptr bool) (interface{}, error) {
 		if float64(math.MaxFloat32) < math.Abs(v) {
-			return v, fmt.Errorf("floatTransformers error: range -> %f", v)
+			return v, fmt.Errorf(
+				"floatTransformers error: range -> %f (reflect.Float32)", v)
 		}
 		if ptr {
 			x := float32(v)
@@ -248,31 +247,13 @@ var floatTransformers = map[reflect.Kind]floatTransformer{
 }
 
 type floatParser struct {
-	transformer intTransformer
+	transformer floatTransformer
 }
 
-//func (s *floatParser) parse(value string, ptr bool) (interface{}, error) {
-//	var v, err = strconv.ParseFloat(value, )
-//
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	return s.transformer(v, ptr), nil
-//}
-
-var structTransformers = map[reflect.Kind]structTransformer{
-	reflect.Struct: func(v interface{}, ptr bool) interface{} {
-		return v
-	},
-}
-
-type structTransformer func(interface{}, bool) interface{}
-
-type structParser struct {
-	transformer structTransformer
-}
-
-func (s *structParser) parse(value string, ptr bool) (interface{}, error) {
-	return s.transformer(value, ptr), nil
+func (s *floatParser) parse(value string, ptr bool) (interface{}, error) {
+	if v, err := strconv.ParseFloat(value, 64); err != nil {
+		return nil, err
+	} else {
+		return s.transformer(v, ptr)
+	}
 }
