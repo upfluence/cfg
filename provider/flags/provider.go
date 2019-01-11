@@ -3,6 +3,7 @@ package flags
 import (
 	"context"
 	"os"
+	"strings"
 
 	"github.com/upfluence/cfg/provider"
 )
@@ -31,31 +32,25 @@ func parseFlags(args []string) map[string]string {
 
 		key     string
 		inParam bool
-
-		pushSingleKey = func() {
-			res[key] = "true"
-			inParam = false
-		}
 	)
 
 	for _, arg := range args {
-		v, ok := parseArg(arg)
+		if v, ok := parseArg(arg); ok {
+			key = v
+			val := "true"
+			inParam = true
 
-		if ok {
-			if inParam {
-				pushSingleKey()
+			if strings.HasPrefix(v, "no-") && len(v) > 3 {
+				key = strings.TrimPrefix(v, "no-")
+				val = "false"
+				inParam = false
 			}
 
-			key = v
-			inParam = true
+			res[key] = val
 		} else if len(v) > 0 && inParam {
 			res[key] = v
 			inParam = false
 		}
-	}
-
-	if inParam {
-		pushSingleKey()
 	}
 
 	return res
