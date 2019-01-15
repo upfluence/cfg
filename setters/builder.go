@@ -35,9 +35,9 @@ func (*defaultSetterFactory) buildParser(k reflect.Kind) parser {
 	case reflect.String:
 		return &stringParser{}
 	case reflect.Int, reflect.Int64, reflect.Int32:
-		return &intParser{transformer: intTransformers[k]}
+		return &intParser{transformer: intTransformerFactory(k)}
 	case reflect.Float32, reflect.Float64:
-		return &floatParser{transformer: floatTransformers[k]}
+		return &floatParser{transformer: floatTransformerFactory(k)}
 	case reflect.Bool:
 		return &boolParser{}
 	}
