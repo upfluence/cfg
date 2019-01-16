@@ -14,7 +14,21 @@ TODO
 
 ### Flags
 
-TODO
+You can pull configuration straight from the command line arguments provided.
+
+It parses UNIX formatted flags (i.e. all values prefix with one or two minus signs). 
+For a specific value, let's say `foo` it will lookup for
+ `-foo`, `--foo`, `--no-foo` arguments in order to fulfil the field.
+
+To use a custom flag for a field you can add a flag struct tag.
+
+The `flags` provider is added by default with `cfg.NewDefaultConfigurator`
+for plain configurator you can add it like: 
+`cfg.NewConfigurator(flags.NewDefaultProvider())`
+
+You can refers to the [Examples!](#Example)
+  * <a href="#flags-session">`flags`</a>
+  * <a href="#flags-booleans">`flags-booleans`</a>
 
 ### JSON input
 
@@ -76,6 +90,8 @@ $ ARG_1=foo ARG_2 ./example
 Arg1: foo, Arg2: bar
 ```
 
+<a id="flags-session"/>
+
 * `flags`:
 
 ```
@@ -83,12 +99,15 @@ $ ./example --arg1 foo --arg2 bar
 Arg1: foo, Arg2: bar
 ```
 
-* `flags:booleans`:
+<a id="flags-booleans"/>
+
+* `flags-booleans`:
 
 ```
 $ ./example --arg1 --no-arg2
 Arg1: TRUE, Arg2: FALSE
 ```
+
 
 ## Roadmap
 
