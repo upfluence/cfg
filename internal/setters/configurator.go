@@ -12,9 +12,7 @@ import (
 	"github.com/upfluence/cfg/provider/flags"
 )
 
-var (
-	ErrShouldBeAStructPtr = errors.New("cfg: input should be a pointer")
-)
+var ErrShouldBeAStructPtr = errors.New("cfg: input should be a pointer")
 
 type Configurator interface {
 	Populate(context.Context, interface{}) error
@@ -22,7 +20,7 @@ type Configurator interface {
 
 type configurator struct {
 	providers []provider.Provider
-	factory   setterFactory
+	factory   SetterFactory
 }
 
 func NewDefaultConfigurator(providers ...provider.Provider) Configurator {

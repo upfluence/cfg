@@ -2,13 +2,13 @@ package setters
 
 import (
 	"reflect"
+
+	"github.com/upfluence/cfg/internal/setters/parsers"
 )
 
-type setterFactory interface {
-	buildSetter(reflect.StructField) setter
+type SetterFactory interface {
+	buildSetter(reflect.StructField) Setter
 }
-
-type defaultSetterFactory struct{}
 
 func indirectedValue(v reflect.Value) reflect.Value {
 	if v.Type().Kind() == reflect.Ptr {
@@ -30,7 +30,17 @@ func indirectedFieldKind(t reflect.Type) reflect.Kind {
 	return indirectedType(t).Kind()
 }
 
-func (*defaultSetterFactory) buildParser(k reflect.Kind) parser {
+type DefaultSetterFactory struct{}
+
+func (factory *DefaultSetterFactory) buildSetter(f reflect.StructField) Setter {
+	if p := factory.buildParser(indirectedFieldKind(f.Type)); p != nil {
+		return &parserSetter{field: f, parser: p}
+	}
+
+	return nil
+}
+
+func (*DefaultSetterFactory) buildParser(k reflect.Kind) parsers.Parser {
 	switch k {
 	case reflect.String:
 		return &stringParser{}
@@ -40,14 +50,6 @@ func (*defaultSetterFactory) buildParser(k reflect.Kind) parser {
 		return &floatParser{transformer: floatTransformerFactory(k)}
 	case reflect.Bool:
 		return &boolParser{}
-	}
-
-	return nil
-}
-
-func (factory *defaultSetterFactory) buildSetter(f reflect.StructField) setter {
-	if p := factory.buildParser(indirectedFieldKind(f.Type)); p != nil {
-		return &parserSetter{field: f, parser: p}
 	}
 
 	return nil

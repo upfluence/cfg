@@ -97,7 +97,8 @@ kinds of improvment.
 
 ### Field parsing
 
-The current implementation only parse: `string`, `int`, `int64`, `bool`
+The current implementation only parse:
+`string`, `int`, `int8`, `int16`, `int32`,`int64`, `bool`, `float32`, `float64`
 and recursive sub structs. We will implement more types (including floats,
 slices and etc...)
 
