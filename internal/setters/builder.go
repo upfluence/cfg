@@ -43,13 +43,13 @@ func (factory *DefaultSetterFactory) buildSetter(f reflect.StructField) Setter {
 func (*DefaultSetterFactory) buildParser(k reflect.Kind) parsers.Parser {
 	switch k {
 	case reflect.String:
-		return &stringParser{}
+		return &parsers.StringParser{}
 	case reflect.Int, reflect.Int64, reflect.Int32:
-		return &intParser{transformer: intTransformerFactory(k)}
+		return &parsers.IntParser{transformer: parsers.IntTransformerFactory(k)}
 	case reflect.Float32, reflect.Float64:
-		return &floatParser{transformer: floatTransformerFactory(k)}
+		return &parsers.FloatParser{transformer: parsers.FloatTransformerFactory(k)}
 	case reflect.Bool:
-		return &boolParser{}
+		return &parsers.BoolParser{}
 	}
 
 	return nil

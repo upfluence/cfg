@@ -1,5 +1,5 @@
 package parsers
 
 type Parser interface {
-	parse(string, bool) (interface{}, error)
+	Parse(string, bool) (interface{}, error)
 }

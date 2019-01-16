@@ -1,4 +1,4 @@
-package setters
+package cfg
 
 import (
 	"context"

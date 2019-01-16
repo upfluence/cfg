@@ -9,11 +9,11 @@ import (
 
 type intTransformer func(int64, bool) (interface{}, error)
 
-type intParser struct {
+type IntParser struct {
 	transformer intTransformer
 }
 
-func (s *intParser) parse(value string, ptr bool) (interface{}, error) {
+func (s *IntParser) parse(value string, ptr bool) (interface{}, error) {
 	if v, err := strconv.ParseInt(value, 10, 64); err != nil {
 		return nil, err
 	} else {
@@ -21,7 +21,7 @@ func (s *intParser) parse(value string, ptr bool) (interface{}, error) {
 	}
 }
 
-func intTransformerFactory(t reflect.Kind) intTransformer {
+func IntTransformerFactory(t reflect.Kind) intTransformer {
 	return func(v int64, ptr bool) (interface{}, error) {
 		return reflectIntTransformer(v, ptr, t)
 	}

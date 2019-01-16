@@ -1,4 +1,4 @@
-package setters
+package cfg
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/upfluence/cfg/internal/setters"
 	"github.com/upfluence/cfg/provider"
 	"github.com/upfluence/cfg/provider/env"
 	"github.com/upfluence/cfg/provider/flags"
@@ -20,7 +21,7 @@ type Configurator interface {
 
 type configurator struct {
 	providers []provider.Provider
-	factory   SetterFactory
+	factory   setters.SetterFactory
 }
 
 func NewDefaultConfigurator(providers ...provider.Provider) Configurator {

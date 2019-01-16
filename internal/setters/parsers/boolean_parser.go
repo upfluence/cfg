@@ -2,9 +2,9 @@ package parsers
 
 import "strings"
 
-type boolParser struct{}
+type BoolParser struct{}
 
-func (s *boolParser) parse(value string, ptr bool) (interface{}, error) {
+func (s *BoolParser) parse(value string, ptr bool) (interface{}, error) {
 	var v bool
 
 	switch strings.ToUpper(strings.TrimSpace(value)) {

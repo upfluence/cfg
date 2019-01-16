@@ -18,7 +18,7 @@ type parserSetter struct {
 func (s *parserSetter) set(value string, target interface{}) error {
 	var t = indirectedValue(reflect.ValueOf(target)).FieldByName(s.field.Name)
 
-	v, err := s.parser.parse(value, t.Type().Kind() == reflect.Ptr)
+	v, err := s.parser.Parse(value, t.Type().Kind() == reflect.Ptr)
 
 	if err != nil {
 		return err
