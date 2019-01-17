@@ -27,8 +27,8 @@ for plain configurator you can add it like:
 `cfg.NewConfigurator(flags.NewDefaultProvider())`
 
 You can refers to the [Examples!](#Example)
-  * <a href="#flags-session">`flags`</a>
-  * <a href="#flags-booleans">`flags-booleans`</a>
+  - [flags](#flags-session)
+  - [flags-booleans](#flags-booleans)
 
 ### JSON input
 
@@ -90,7 +90,7 @@ $ ARG_1=foo ARG_2 ./example
 Arg1: foo, Arg2: bar
 ```
 
-<a id="flags-session">* `flags`:</a>
+*<a id="flags-session">`flags`:</a>
 
 
 ```
@@ -98,9 +98,8 @@ $ ./example --arg1 foo --arg2 bar
 Arg1: foo, Arg2: bar
 ```
 
-<a id="flags-booleans"/>
+*<a id="flags-booleans">`flags-booleans`:</a>
 
-* `flags-booleans`:
 
 ```
 $ ./example --arg1 --no-arg2
