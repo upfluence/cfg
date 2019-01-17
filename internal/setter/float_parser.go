@@ -12,7 +12,6 @@ type floatParser struct {
 	transformer floatTransformer
 }
 
-//TODO: error-managing form ?
 func (s *floatParser) parse(value string, ptr bool) (interface{}, error) {
 	if v, err := strconv.ParseFloat(value, 64); err != nil {
 		return nil, err
@@ -23,20 +22,17 @@ func (s *floatParser) parse(value string, ptr bool) (interface{}, error) {
 
 func floatTransformerFactory(t reflect.Kind) floatTransformer {
 	return func(v float64, ptr bool) (interface{}, error) {
-		return reflectFloatTransformer(v, ptr, t)
-	}
-}
+		fun := floatFuncs(t)
 
-func reflectFloatTransformer(v float64, ptr bool, kind reflect.Kind) (interface{}, error) {
+		if ret, err := fun(v); err != nil {
+			return nil, err
+		} else {
+			if ptr {
+				return &ret, nil
+			}
 
-	fun := floatFuncs(kind)
-	if ret, err := fun(v); err != nil {
-		return nil, err
-	} else {
-		if ptr {
-			return &ret, nil
+			return ret, nil
 		}
-		return ret, nil
 	}
 }
 
