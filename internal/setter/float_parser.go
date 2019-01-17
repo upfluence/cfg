@@ -22,7 +22,7 @@ func (s *floatParser) parse(value string, ptr bool) (interface{}, error) {
 
 func floatTransformerFactory(t reflect.Kind) floatTransformer {
 	return func(v float64, ptr bool) (interface{}, error) {
-		fun := floatFuncs(t)
+		var fun = floatFuncs(t)
 
 		if ret, err := fun(v); err != nil {
 			return nil, err
