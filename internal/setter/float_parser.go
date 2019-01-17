@@ -1,7 +1,6 @@
 package setter
 
 import (
-	"errors"
 	"math"
 	"reflect"
 	"strconv"
@@ -45,8 +44,7 @@ func floatFuncs(kind reflect.Kind) func(float64) (interface{}, error) {
 	case reflect.Float32:
 		return func(v float64) (interface{}, error) {
 			if float64(math.MaxFloat32) < math.Abs(v) {
-				errCustom := ErrInvalidRange{kind.String(), v}
-				return nil, errors.New(errCustom.Error())
+				return nil, &ErrInvalidRange{kind.String(), v}
 			}
 
 			return float32(v), nil
@@ -57,8 +55,7 @@ func floatFuncs(kind reflect.Kind) func(float64) (interface{}, error) {
 		}
 	default:
 		return func(v float64) (interface{}, error) {
-			errCustom := ErrKindTypeNotImplemented{kind.String()}
-			return nil, errors.New(errCustom.Error())
+			return nil, &ErrKindTypeNotImplemented{kind.String()}
 		}
 	}
 }

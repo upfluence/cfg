@@ -1,7 +1,6 @@
 package setter
 
 import (
-	"errors"
 	"math"
 	"reflect"
 	"strconv"
@@ -50,8 +49,7 @@ func intFuncs(kind reflect.Kind) func(int64) (interface{}, error) {
 				minRange = int64(-int(maxRange) - 1)
 			)
 			if v > maxRange || v < minRange {
-				errCustom := ErrInvalidRange{kind.String(), v}
-				return nil, errors.New(errCustom.Error())
+				return nil, &ErrInvalidRange{kind.String(), v}
 			}
 
 			return int(v), nil
@@ -63,8 +61,7 @@ func intFuncs(kind reflect.Kind) func(int64) (interface{}, error) {
 				maxRange = int64(math.MaxInt8)
 			)
 			if v > maxRange || v < minRange {
-				errCustom := ErrInvalidRange{kind.String(), v}
-				return nil, errors.New(errCustom.Error())
+				return nil, &ErrInvalidRange{kind.String(), v}
 			}
 
 			return int8(v), nil
@@ -76,8 +73,7 @@ func intFuncs(kind reflect.Kind) func(int64) (interface{}, error) {
 				maxRange = int64(math.MaxInt16)
 			)
 			if v > maxRange || v < minRange {
-				errCustom := ErrInvalidRange{kind.String(), v}
-				return nil, errors.New(errCustom.Error())
+				return nil, &ErrInvalidRange{kind.String(), v}
 			}
 
 			return int16(v), nil
@@ -89,8 +85,7 @@ func intFuncs(kind reflect.Kind) func(int64) (interface{}, error) {
 				maxRange = int64(math.MaxInt32)
 			)
 			if v > maxRange || v < minRange {
-				errCustom := ErrInvalidRange{kind.String(), v}
-				return nil, errors.New(errCustom.Error())
+				return nil, &ErrInvalidRange{kind.String(), v}
 			}
 
 			return int32(v), nil
@@ -101,8 +96,7 @@ func intFuncs(kind reflect.Kind) func(int64) (interface{}, error) {
 		}
 	default:
 		return func(v int64) (interface{}, error) {
-			errCustom := ErrKindTypeNotImplemented{kind.String()}
-			return nil, errors.New(errCustom.Error())
+			return nil, &ErrKindTypeNotImplemented{kind.String()}
 		}
 	}
 
