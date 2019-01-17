@@ -1,4 +1,4 @@
-package parsers
+package setter
 
 import (
 	"errors"
@@ -9,11 +9,11 @@ import (
 
 type floatTransformer func(float64, bool) (interface{}, error)
 
-type FloatParser struct {
+type floatParser struct {
 	transformer floatTransformer
 }
 
-func (s *FloatParser) parse(value string, ptr bool) (interface{}, error) {
+func (s *floatParser) parse(value string, ptr bool) (interface{}, error) {
 	if v, err := strconv.ParseFloat(value, 64); err != nil {
 		return nil, err
 	} else {
@@ -21,7 +21,7 @@ func (s *FloatParser) parse(value string, ptr bool) (interface{}, error) {
 	}
 }
 
-func FloatTransformerFactory(t reflect.Kind) floatTransformer {
+func floatTransformerFactory(t reflect.Kind) floatTransformer {
 	return func(v float64, ptr bool) (interface{}, error) {
 		return reflectFloatTransformer(v, ptr, t)
 	}

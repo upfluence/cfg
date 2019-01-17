@@ -7,7 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/upfluence/cfg/internal/setters"
+	"github.com/upfluence/cfg/internal/setter"
 	"github.com/upfluence/cfg/provider"
 	"github.com/upfluence/cfg/provider/env"
 	"github.com/upfluence/cfg/provider/flags"
@@ -21,7 +21,7 @@ type Configurator interface {
 
 type configurator struct {
 	providers []provider.Provider
-	factory   setters.SetterFactory
+	factory   setter.SetterFactory
 }
 
 func NewDefaultConfigurator(providers ...provider.Provider) Configurator {
@@ -31,7 +31,10 @@ func NewDefaultConfigurator(providers ...provider.Provider) Configurator {
 }
 
 func NewConfigurator(providers ...provider.Provider) Configurator {
-	return &configurator{providers: providers, factory: &defaultSetterFactory{}}
+	return &configurator{
+		providers: providers,
+		factory:   &setter.DefaultSetterFactory{},
+	}
 }
 
 func (c *configurator) Populate(ctx context.Context, out interface{}) error {
@@ -57,12 +60,12 @@ func (c *configurator) Populate(ctx context.Context, out interface{}) error {
 }
 
 func (c *configurator) populate(ctx context.Context, p provider.Provider, vVal reflect.Value, ns []string) error {
-	var indirectVType = indirectedType(vVal.Type())
+	var indirectVType = setter.IndirectedType(vVal.Type())
 
 	for i := 0; i < indirectVType.NumField(); i++ {
 		field := indirectVType.Field(i)
-		s := c.factory.buildSetter(field)
-		v := indirectedValue(vVal).FieldByName(field.Name)
+		s := c.factory.BuildSetter(field)
+		v := setter.IndirectedValue(vVal).FieldByName(field.Name)
 		n := field.Name
 
 		if t := p.StructTag(); t != "" {
@@ -75,7 +78,7 @@ func (c *configurator) populate(ctx context.Context, p provider.Provider, vVal r
 			continue
 		}
 
-		if s == nil && indirectedType(field.Type).Kind() == reflect.Struct {
+		if s == nil && setter.IndirectedType(field.Type).Kind() == reflect.Struct {
 			if field.Type.Kind() != reflect.Ptr {
 				v = v.Addr()
 			} else {
@@ -103,7 +106,7 @@ func (c *configurator) populate(ctx context.Context, p provider.Provider, vVal r
 				continue
 			}
 
-			if err := s.set(v, vVal.Interface()); err != nil {
+			if err := s.Set(v, vVal.Interface()); err != nil {
 				return err
 			}
 		}

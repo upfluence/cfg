@@ -1,10 +1,10 @@
-package parsers
+package setter
 
 import "strings"
 
-type BoolParser struct{}
+type boolParser struct{}
 
-func (s *BoolParser) parse(value string, ptr bool) (interface{}, error) {
+func (s *boolParser) parse(value string, ptr bool) (interface{}, error) {
 	var v bool
 
 	switch strings.ToUpper(strings.TrimSpace(value)) {

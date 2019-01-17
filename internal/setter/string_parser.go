@@ -1,4 +1,4 @@
-package parsers
+package setter
 
 type stringParser struct{}
 
