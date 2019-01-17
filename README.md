@@ -23,7 +23,6 @@ Booleans arguments can be set to :
   - true  : `--foo`
   - false : `--no-foo`
 
-
 To use a custom flag for a field you can add a flag struct tag.
 
 The `flags` provider is added by default with `cfg.NewDefaultConfigurator`   
@@ -125,9 +124,9 @@ The current implementation only parse:
   - `string`
   - `boolean`
   - `int (simple, 8, 16, 32 & 64)`
-  - `float (32 & 64)`
-and recursive sub structs. We will implement more types (including floats,
-slices and etc...)
+  - `float (32 & 64)`   
+and recursive sub structs.   
+We will implement more types including : slices and etc...
 
 ### Other provider
 
