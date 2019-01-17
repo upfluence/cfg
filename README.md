@@ -90,7 +90,7 @@ $ ARG_1=foo ARG_2 ./example
 Arg1: foo, Arg2: bar
 ```
 
-*<a id="flags-session">`flags`:</a>
+* <a id="flags-session">`flags`:</a>
 
 
 ```
@@ -98,7 +98,7 @@ $ ./example --arg1 foo --arg2 bar
 Arg1: foo, Arg2: bar
 ```
 
-*<a id="flags-booleans">`flags-booleans`:</a>
+* <a id="flags-booleans">`flags-booleans`:</a>
 
 
 ```
