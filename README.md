@@ -18,7 +18,11 @@ You can pull configuration straight from the command line arguments provided.
 
 It parses UNIX formatted flags (i.e. all values prefix with one or two minus signs). 
 For a specific value, let's say `foo` it will lookup for
- `-foo`, `--foo`, `--no-foo` arguments in order to fulfil the field.
+ `-foo`, `--[no-]foo` arguments in order to fulfil the field.
+Booleans arguments can be set to :
+  - true  : `--foo`
+  - false : `--no-foo`
+
 
 To use a custom flag for a field you can add a flag struct tag.
 
@@ -29,6 +33,9 @@ for plain configurator you can add it like:
 You can refers to the [Examples!](#Example)
   - [flags](#flags-session)
   - [flags-booleans](#flags-booleans)
+
+More technical informations can be found into the package : `cfg/provider/flags`.
+Where some tests are already set into the `cfg/provider/flags/providers_test.go`.
 
 ### JSON input
 
