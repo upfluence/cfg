@@ -90,9 +90,8 @@ $ ARG_1=foo ARG_2 ./example
 Arg1: foo, Arg2: bar
 ```
 
-<a id="flags-session"/>
+<a id="flags-session">* `flags`:</a>
 
-* `flags`:
 
 ```
 $ ./example --arg1 foo --arg2 bar
