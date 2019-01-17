@@ -12,6 +12,7 @@ type floatParser struct {
 	transformer floatTransformer
 }
 
+//TODO: error-managing form ?
 func (s *floatParser) parse(value string, ptr bool) (interface{}, error) {
 	if v, err := strconv.ParseFloat(value, 64); err != nil {
 		return nil, err

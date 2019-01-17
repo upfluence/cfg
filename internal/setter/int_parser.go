@@ -12,6 +12,7 @@ type intParser struct {
 	transformer intTransformer
 }
 
+//TODO: error-managing form ?
 func (s *intParser) parse(value string, ptr bool) (interface{}, error) {
 	if v, err := strconv.ParseInt(value, 10, 64); err != nil {
 		return nil, err
