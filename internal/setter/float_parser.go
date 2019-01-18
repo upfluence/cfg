@@ -24,7 +24,7 @@ func floatTransformerFactory(t reflect.Kind) floatTransformer {
 	return func(v float64, ptr bool) (interface{}, error) {
 		var fun = floatFuncs(t)
 
-		if ret, err := fun(v); err != nil {
+		if ret, err := fun(v, ptr); err != nil {
 			return nil, err
 		} else {
 			if ptr {
@@ -36,22 +36,32 @@ func floatTransformerFactory(t reflect.Kind) floatTransformer {
 	}
 }
 
-func floatFuncs(kind reflect.Kind) func(float64) (interface{}, error) {
+func floatFuncs(kind reflect.Kind) func(float64, bool) (interface{}, error) {
 	switch kind {
 	case reflect.Float32:
-		return func(v float64) (interface{}, error) {
+		return func(v float64, b bool) (interface{}, error) {
 			if float64(math.MaxFloat32) < math.Abs(v) {
 				return nil, &ErrInvalidRange{kind.String(), v}
 			}
 
-			return float32(v), nil
+			var val = float32(v)
+
+			if b {
+				return &val, nil
+			}
+
+			return val, nil
 		}
 	case reflect.Float64:
-		return func(v float64) (interface{}, error) {
+		return func(v float64, b bool) (interface{}, error) {
+			if b {
+				return &v, nil
+			}
+
 			return v, nil
 		}
 	default:
-		return func(v float64) (interface{}, error) {
+		return func(v float64, b bool) (interface{}, error) {
 			return nil, &ErrKindTypeNotImplemented{kind.String()}
 		}
 	}
