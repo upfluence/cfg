@@ -30,15 +30,19 @@ func IndirectedFieldKind(t reflect.Type) reflect.Kind {
 
 type DefaultSetterFactory struct{}
 
+func NewDefaultSetterFactory() *DefaultSetterFactory {
+	return &DefaultSetterFactory{}
+}
+
 func (factory *DefaultSetterFactory) BuildSetter(f reflect.StructField) Setter {
-	if p := factory.BuildParser(IndirectedFieldKind(f.Type)); p != nil {
+	if p := factory.buildParser(IndirectedFieldKind(f.Type)); p != nil {
 		return &ParserSetter{Field: f, Parser: p}
 	}
 
 	return nil
 }
 
-func (*DefaultSetterFactory) BuildParser(k reflect.Kind) parser {
+func (*DefaultSetterFactory) buildParser(k reflect.Kind) parser {
 	switch k {
 	case reflect.String:
 		return &stringParser{}

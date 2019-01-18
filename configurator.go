@@ -33,7 +33,7 @@ func NewDefaultConfigurator(providers ...provider.Provider) Configurator {
 func NewConfigurator(providers ...provider.Provider) Configurator {
 	return &configurator{
 		providers: providers,
-		factory:   &setter.DefaultSetterFactory{},
+		factory:   setter.NewDefaultSetterFactory(),
 	}
 }
 

@@ -19,7 +19,7 @@ type ErrInvalidRange struct {
 }
 
 type ErrKindTypeNotImplemented struct {
-	kind string
+	kind reflect.Kind
 }
 
 func (e *ErrNotBoolValue) Error() string {
@@ -40,7 +40,7 @@ func (e *ErrInvalidRange) Error() string {
 
 func (e *ErrKindTypeNotImplemented) Error() string {
 	return fmt.Sprintf(
-		"INTERNAL ERROR: %s transformer not implemented",
+		"cfg: No parser implemented for %v",
 		e.kind,
 	)
 }

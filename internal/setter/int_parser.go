@@ -117,7 +117,7 @@ func intFuncs(kind reflect.Kind) func(int64, bool) (interface{}, error) {
 		}
 	default:
 		return func(v int64, b bool) (interface{}, error) {
-			return nil, &ErrKindTypeNotImplemented{kind.String()}
+			return nil, &ErrKindTypeNotImplemented{kind}
 		}
 	}
 
