@@ -26,6 +26,13 @@ func TestProvider_Provide(t *testing.T) {
 			wantExist: true,
 		},
 		{
+			name:      "slice value",
+			p:         &Provider{map[string]interface{}{"foo": []int64{1, 2, 3}}},
+			in:        "foo",
+			wantValue: "1,2,3",
+			wantExist: true,
+		},
+		{
 			name:      "second level value",
 			p:         &Provider{map[string]interface{}{"foo": map[string]interface{}{"fiz": "bar"}}},
 			in:        "foo.fiz",
