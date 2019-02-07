@@ -7,6 +7,7 @@ import (
 	"os"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/upfluence/cfg/provider"
 )
@@ -56,6 +57,14 @@ func hasError(t *testing.T, err error) {
 	if err == nil {
 		t.Errorf("Error returned but none returned")
 	}
+}
+
+type durationStruct struct {
+	D time.Duration `mock:"d"`
+}
+
+type timeStruct struct {
+	T time.Time `mock:"t"`
 }
 
 func stringPtr(s string) *string { return &s }
@@ -192,10 +201,32 @@ func TestConfigurator(t *testing.T) {
 		testCase{
 			caseName: "basic-map",
 			input:    &mapStringIntStruct{},
-			provider: &mockProvider{st: map[string]string{"map": "foo=1,bar=2,buz=3,fiz"}},
+			provider: &mockProvider{
+				st: map[string]string{"map": "foo=1,bar=2,buz=3,fiz"},
+			},
 			dataAssertion: deepEqual(&mapStringIntStruct{
 				Map: map[string]int{"foo": 1, "bar": 2, "buz": 3},
 			}),
+			errAssertion: noError,
+		},
+		testCase{
+			caseName: "duration",
+			input:    &durationStruct{},
+			provider: &mockProvider{st: map[string]string{"d": "5m"}},
+			dataAssertion: deepEqual(&durationStruct{
+				D: 5 * time.Minute,
+			}),
+			errAssertion: noError,
+		},
+		testCase{
+			caseName: "time.Time",
+			input:    &timeStruct{},
+			provider: &mockProvider{
+				st: map[string]string{"t": "2019-01-01T01:00:00"},
+			},
+			dataAssertion: deepEqual(
+				&timeStruct{T: time.Date(2019, 1, 1, 1, 0, 0, 0, time.UTC)},
+			),
 			errAssertion: noError,
 		},
 		testCase{

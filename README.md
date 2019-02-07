@@ -101,6 +101,8 @@ The current implementation parses:
 * `string`
 * `int`, `int64`
 * `bool`
+* `time.Duration` using `time.ParseDuration`
+* `time.Time` based on the format `2006-01-02T15:04:05`
 * sub structs
 * slices
 * maps

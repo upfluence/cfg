@@ -5,6 +5,17 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
+)
+
+var (
+	durationType = reflect.TypeOf(time.Duration(0))
+	timeType     = reflect.TypeOf(time.Time{})
+
+	presetParsers = map[reflect.Type]parser{
+		durationType: durationParser{},
+		timeType:     timeParser{},
+	}
 )
 
 type setterFactory interface {
@@ -39,6 +50,10 @@ func (dsf *defaultSetterFactory) buildBasicParser(t reflect.Type) (parser, bool)
 	if k == reflect.Ptr {
 		k = t.Elem().Kind()
 		ptr = true
+	}
+
+	if p, ok := presetParsers[t]; ok {
+		return p, ptr
 	}
 
 	switch k {
@@ -263,4 +278,36 @@ func (s *intParser) parse(value string, ptr bool) (interface{}, error) {
 	}
 
 	return s.transformer(v, ptr), nil
+}
+
+type timeParser struct{}
+
+func (s timeParser) parse(value string, ptr bool) (interface{}, error) {
+	t, err := time.Parse("2006-01-02T15:04:05", value)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if ptr {
+		return &t, nil
+	}
+
+	return t, nil
+}
+
+type durationParser struct{}
+
+func (s durationParser) parse(value string, ptr bool) (interface{}, error) {
+	d, err := time.ParseDuration(value)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if ptr {
+		return &d, nil
+	}
+
+	return d, nil
 }
