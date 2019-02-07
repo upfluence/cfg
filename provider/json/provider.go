@@ -65,11 +65,29 @@ func (p *Provider) Provide(_ context.Context, v string) (string, bool, error) {
 func stringifyValue(v interface{}) string {
 	vv := reflect.ValueOf(v)
 
-	if vv.Kind() == reflect.Slice {
+	switch vv.Kind() {
+	case reflect.Slice:
 		var vs []string
 
 		for i := 0; i < vv.Len(); i++ {
 			vs = append(vs, stringifyValue(vv.Index(i).Interface()))
+		}
+
+		return strings.Join(vs, ",")
+	case reflect.Map:
+		var vs []string
+
+		for _, mkv := range vv.MapKeys() {
+			mvv := vv.MapIndex(mkv)
+
+			vs = append(
+				vs,
+				fmt.Sprintf(
+					"%s=%s",
+					stringifyValue(mkv.Interface()),
+					stringifyValue(mvv.Interface()),
+				),
+			)
 		}
 
 		return strings.Join(vs, ",")
