@@ -29,11 +29,9 @@ func indirectedType(t reflect.Type) reflect.Type {
 	return t
 }
 
-func indirectedFieldKind(t reflect.Type) reflect.Kind {
-	return indirectedType(t).Kind()
-}
+func (dsf *defaultSetterFactory) buildParser(t reflect.Type) parser {
+	k := t.Kind()
 
-func (*defaultSetterFactory) buildParser(k reflect.Kind) parser {
 	switch k {
 	case reflect.String:
 		return &stringParser{}
@@ -41,13 +39,29 @@ func (*defaultSetterFactory) buildParser(k reflect.Kind) parser {
 		return &intParser{transformer: intTransformers[k]}
 	case reflect.Bool:
 		return &boolParser{}
+	case reflect.Slice:
+		ptr := false
+		et := t.Elem()
+
+		if et.Kind() == reflect.Ptr {
+			ptr = true
+			et = et.Elem()
+		}
+
+		p := dsf.buildParser(et)
+
+		if p == nil {
+			return nil
+		}
+
+		return &sliceParser{p: p, t: t, ptr: ptr}
 	}
 
 	return nil
 }
 
 func (factory *defaultSetterFactory) buildSetter(f reflect.StructField) setter {
-	if p := factory.buildParser(indirectedFieldKind(f.Type)); p != nil {
+	if p := factory.buildParser(indirectedType(f.Type)); p != nil {
 		return &parserSetter{field: f, parser: p}
 	}
 
@@ -115,6 +129,30 @@ func (s *parserSetter) set(value string, target interface{}) error {
 
 type parser interface {
 	parse(string, bool) (interface{}, error)
+}
+
+type sliceParser struct {
+	p parser
+
+	t   reflect.Type
+	ptr bool
+}
+
+func (sp *sliceParser) parse(v string, ptr bool) (interface{}, error) {
+	args := strings.Split(v, ",")
+	res := reflect.MakeSlice(sp.t, 0, len(args))
+
+	for _, arg := range args {
+		v, err := sp.p.parse(arg, sp.ptr)
+
+		if err != nil {
+			return nil, err
+		}
+
+		res = reflect.Append(res, reflect.ValueOf(v))
+	}
+
+	return res.Interface(), nil
 }
 
 type stringParser struct{}

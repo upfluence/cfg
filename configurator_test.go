@@ -11,6 +11,12 @@ import (
 	"github.com/upfluence/cfg/provider"
 )
 
+var (
+	i64One   int64 = 1
+	i64Two   int64 = 2
+	i64Three int64 = 3
+)
+
 type mockProvider struct {
 	st  map[string]string
 	err error
@@ -84,6 +90,18 @@ type nestedPtrStruct struct {
 	Nested *nestedV `mock:"nested"`
 }
 
+type sliceStruct struct {
+	Slice []int64 `mock:"slice"`
+}
+
+type slicePtrInt64Struct struct {
+	Slice []*int64 `mock:"slice"`
+}
+
+type stringSliceStruct struct {
+	Strings []string `mock:"strings"`
+}
+
 func boolTestCase(in string, out bool) testCase {
 	return testCase{
 		input:         &basicStructBool{},
@@ -96,6 +114,7 @@ func boolTestCase(in string, out bool) testCase {
 
 func deepEqual(x interface{}) func(*testing.T, interface{}) {
 	return func(t *testing.T, y interface{}) {
+		t.Helper()
 		if !reflect.DeepEqual(x, y) {
 			t.Errorf("Expected equality with %v but %v", x, y)
 		}
@@ -140,6 +159,31 @@ func TestConfigurator(t *testing.T) {
 			dataAssertion: deepEqual(&basicStruct2{}),
 			provider:      &mockProvider{st: map[string]string{"Foo": "dwadaw"}},
 			errAssertion:  hasError,
+		},
+		testCase{
+			caseName:      "basic-slice-int64",
+			input:         &sliceStruct{},
+			provider:      &mockProvider{st: map[string]string{"slice": "1,2,3"}},
+			dataAssertion: deepEqual(&sliceStruct{Slice: []int64{1, 2, 3}}),
+			errAssertion:  noError,
+		},
+		testCase{
+			caseName: "basic-slice-ptr-int64",
+			input:    &slicePtrInt64Struct{},
+			provider: &mockProvider{st: map[string]string{"slice": "1,2,3"}},
+			dataAssertion: deepEqual(&slicePtrInt64Struct{
+				Slice: []*int64{&i64One, &i64Two, &i64Three},
+			}),
+			errAssertion: noError,
+		},
+		testCase{
+			caseName: "basic-slice-string-slice",
+			input:    &stringSliceStruct{},
+			provider: &mockProvider{st: map[string]string{"strings": "foo,bar,buz"}},
+			dataAssertion: deepEqual(&stringSliceStruct{
+				Strings: []string{"foo", "bar", "buz"},
+			}),
+			errAssertion: noError,
 		},
 		testCase{
 			caseName:      "basic-ptr",
