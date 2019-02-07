@@ -29,35 +29,61 @@ func indirectedType(t reflect.Type) reflect.Type {
 	return t
 }
 
+func (dsf *defaultSetterFactory) buildBasicParser(t reflect.Type) (parser, bool) {
+	var (
+		k = t.Kind()
+
+		ptr bool
+	)
+
+	if k == reflect.Ptr {
+		k = t.Elem().Kind()
+		ptr = true
+	}
+
+	switch k {
+	case reflect.String:
+		return &stringParser{}, ptr
+	case reflect.Int, reflect.Int64:
+		return &intParser{transformer: intTransformers[k]}, ptr
+	case reflect.Bool:
+		return &boolParser{}, ptr
+	}
+
+	return nil, false
+}
+
 func (dsf *defaultSetterFactory) buildParser(t reflect.Type) parser {
 	k := t.Kind()
 
 	switch k {
-	case reflect.String:
-		return &stringParser{}
-	case reflect.Int, reflect.Int64:
-		return &intParser{transformer: intTransformers[k]}
-	case reflect.Bool:
-		return &boolParser{}
 	case reflect.Slice:
-		ptr := false
-		et := t.Elem()
-
-		if et.Kind() == reflect.Ptr {
-			ptr = true
-			et = et.Elem()
-		}
-
-		p := dsf.buildParser(et)
+		p, ptr := dsf.buildBasicParser(t.Elem())
 
 		if p == nil {
 			return nil
 		}
 
 		return &sliceParser{p: p, t: t, ptr: ptr}
+	case reflect.Map:
+		vp, vptr := dsf.buildBasicParser(t.Elem())
+
+		if vp == nil {
+			return nil
+		}
+
+		kp, kptr := dsf.buildBasicParser(t.Key())
+
+		if kp == nil {
+			return nil
+		}
+
+		return &mapParser{t: t, vp: vp, vptr: vptr, kp: kp, kptr: kptr}
 	}
 
-	return nil
+	p, _ := dsf.buildBasicParser(t)
+
+	return p
 }
 
 func (factory *defaultSetterFactory) buildSetter(f reflect.StructField) setter {
@@ -131,10 +157,48 @@ type parser interface {
 	parse(string, bool) (interface{}, error)
 }
 
-type sliceParser struct {
-	p parser
+type mapParser struct {
+	t reflect.Type
 
-	t   reflect.Type
+	vp, kp parser
+
+	vptr, kptr bool
+}
+
+func (mp *mapParser) parse(v string, ptr bool) (interface{}, error) {
+	args := strings.Split(v, ",")
+	res := reflect.MakeMap(mp.t)
+
+	for _, arg := range args {
+		vs := strings.SplitN(arg, "=", 2)
+
+		if len(vs) != 2 {
+			continue
+		}
+
+		k, err := mp.kp.parse(vs[0], mp.kptr)
+
+		if err != nil {
+			return nil, err
+		}
+
+		v, err := mp.vp.parse(vs[1], mp.vptr)
+
+		if err != nil {
+			return nil, err
+		}
+
+		res.SetMapIndex(reflect.ValueOf(k), reflect.ValueOf(v))
+	}
+
+	return res.Interface(), nil
+
+}
+
+type sliceParser struct {
+	t reflect.Type
+
+	p   parser
 	ptr bool
 }
 

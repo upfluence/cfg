@@ -102,6 +102,10 @@ type stringSliceStruct struct {
 	Strings []string `mock:"strings"`
 }
 
+type mapStringIntStruct struct {
+	Map map[string]int `mock:"map"`
+}
+
 func boolTestCase(in string, out bool) testCase {
 	return testCase{
 		input:         &basicStructBool{},
@@ -182,6 +186,15 @@ func TestConfigurator(t *testing.T) {
 			provider: &mockProvider{st: map[string]string{"strings": "foo,bar,buz"}},
 			dataAssertion: deepEqual(&stringSliceStruct{
 				Strings: []string{"foo", "bar", "buz"},
+			}),
+			errAssertion: noError,
+		},
+		testCase{
+			caseName: "basic-map",
+			input:    &mapStringIntStruct{},
+			provider: &mockProvider{st: map[string]string{"map": "foo=1,bar=2,buz=3,fiz"}},
+			dataAssertion: deepEqual(&mapStringIntStruct{
+				Map: map[string]int{"foo": 1, "bar": 2, "buz": 3},
 			}),
 			errAssertion: noError,
 		},
