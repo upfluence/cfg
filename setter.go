@@ -5,6 +5,17 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
+)
+
+var (
+	durationType = reflect.TypeOf(time.Duration(0))
+	timeType     = reflect.TypeOf(time.Time{})
+
+	presetParsers = map[reflect.Type]parser{
+		durationType: durationParser{},
+		timeType:     timeParser{},
+	}
 )
 
 type setterFactory interface {
@@ -29,25 +40,69 @@ func indirectedType(t reflect.Type) reflect.Type {
 	return t
 }
 
-func indirectedFieldKind(t reflect.Type) reflect.Kind {
-	return indirectedType(t).Kind()
-}
+func (dsf *defaultSetterFactory) buildBasicParser(t reflect.Type) (parser, bool) {
+	var (
+		k = t.Kind()
 
-func (*defaultSetterFactory) buildParser(k reflect.Kind) parser {
-	switch k {
-	case reflect.String:
-		return &stringParser{}
-	case reflect.Int, reflect.Int64:
-		return &intParser{transformer: intTransformers[k]}
-	case reflect.Bool:
-		return &boolParser{}
+		ptr bool
+	)
+
+	if k == reflect.Ptr {
+		k = t.Elem().Kind()
+		ptr = true
 	}
 
-	return nil
+	if p, ok := presetParsers[t]; ok {
+		return p, ptr
+	}
+
+	switch k {
+	case reflect.String:
+		return &stringParser{}, ptr
+	case reflect.Int, reflect.Int64:
+		return &intParser{transformer: intTransformers[k]}, ptr
+	case reflect.Bool:
+		return &boolParser{}, ptr
+	}
+
+	return nil, false
+}
+
+func (dsf *defaultSetterFactory) buildParser(t reflect.Type) parser {
+	k := t.Kind()
+
+	switch k {
+	case reflect.Slice:
+		p, ptr := dsf.buildBasicParser(t.Elem())
+
+		if p == nil {
+			return nil
+		}
+
+		return &sliceParser{p: p, t: t, ptr: ptr}
+	case reflect.Map:
+		vp, vptr := dsf.buildBasicParser(t.Elem())
+
+		if vp == nil {
+			return nil
+		}
+
+		kp, kptr := dsf.buildBasicParser(t.Key())
+
+		if kp == nil {
+			return nil
+		}
+
+		return &mapParser{t: t, vp: vp, vptr: vptr, kp: kp, kptr: kptr}
+	}
+
+	p, _ := dsf.buildBasicParser(t)
+
+	return p
 }
 
 func (factory *defaultSetterFactory) buildSetter(f reflect.StructField) setter {
-	if p := factory.buildParser(indirectedFieldKind(f.Type)); p != nil {
+	if p := factory.buildParser(indirectedType(f.Type)); p != nil {
 		return &parserSetter{field: f, parser: p}
 	}
 
@@ -117,6 +172,68 @@ type parser interface {
 	parse(string, bool) (interface{}, error)
 }
 
+type mapParser struct {
+	t reflect.Type
+
+	vp, kp parser
+
+	vptr, kptr bool
+}
+
+func (mp *mapParser) parse(v string, ptr bool) (interface{}, error) {
+	args := strings.Split(v, ",")
+	res := reflect.MakeMap(mp.t)
+
+	for _, arg := range args {
+		vs := strings.SplitN(arg, "=", 2)
+
+		if len(vs) != 2 {
+			continue
+		}
+
+		k, err := mp.kp.parse(vs[0], mp.kptr)
+
+		if err != nil {
+			return nil, err
+		}
+
+		v, err := mp.vp.parse(vs[1], mp.vptr)
+
+		if err != nil {
+			return nil, err
+		}
+
+		res.SetMapIndex(reflect.ValueOf(k), reflect.ValueOf(v))
+	}
+
+	return res.Interface(), nil
+
+}
+
+type sliceParser struct {
+	t reflect.Type
+
+	p   parser
+	ptr bool
+}
+
+func (sp *sliceParser) parse(v string, ptr bool) (interface{}, error) {
+	args := strings.Split(v, ",")
+	res := reflect.MakeSlice(sp.t, 0, len(args))
+
+	for _, arg := range args {
+		v, err := sp.p.parse(arg, sp.ptr)
+
+		if err != nil {
+			return nil, err
+		}
+
+		res = reflect.Append(res, reflect.ValueOf(v))
+	}
+
+	return res.Interface(), nil
+}
+
 type stringParser struct{}
 
 func (*stringParser) parse(v string, ptr bool) (interface{}, error) {
@@ -161,4 +278,36 @@ func (s *intParser) parse(value string, ptr bool) (interface{}, error) {
 	}
 
 	return s.transformer(v, ptr), nil
+}
+
+type timeParser struct{}
+
+func (s timeParser) parse(value string, ptr bool) (interface{}, error) {
+	t, err := time.Parse("2006-01-02T15:04:05", value)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if ptr {
+		return &t, nil
+	}
+
+	return t, nil
+}
+
+type durationParser struct{}
+
+func (s durationParser) parse(value string, ptr bool) (interface{}, error) {
+	d, err := time.ParseDuration(value)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if ptr {
+		return &d, nil
+	}
+
+	return d, nil
 }

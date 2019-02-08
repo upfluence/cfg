@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"reflect"
 	"strings"
 
 	"github.com/upfluence/cfg/provider"
@@ -58,5 +59,39 @@ func (p *Provider) Provide(_ context.Context, v string) (string, bool, error) {
 		cur = res
 	}
 
-	return fmt.Sprintf("%v", res), true, nil
+	return stringifyValue(res), true, nil
+}
+
+func stringifyValue(v interface{}) string {
+	vv := reflect.ValueOf(v)
+
+	switch vv.Kind() {
+	case reflect.Slice:
+		var vs []string
+
+		for i := 0; i < vv.Len(); i++ {
+			vs = append(vs, stringifyValue(vv.Index(i).Interface()))
+		}
+
+		return strings.Join(vs, ",")
+	case reflect.Map:
+		var vs []string
+
+		for _, mkv := range vv.MapKeys() {
+			mvv := vv.MapIndex(mkv)
+
+			vs = append(
+				vs,
+				fmt.Sprintf(
+					"%s=%s",
+					stringifyValue(mkv.Interface()),
+					stringifyValue(mvv.Interface()),
+				),
+			)
+		}
+
+		return strings.Join(vs, ",")
+	}
+
+	return fmt.Sprintf("%v", v)
 }

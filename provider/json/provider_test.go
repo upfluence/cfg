@@ -7,12 +7,13 @@ import (
 
 func TestProvider_Provide(t *testing.T) {
 	tests := []struct {
-		name      string
-		p         *Provider
-		in        string
-		wantValue string
-		wantExist bool
-		wantErr   bool
+		name        string
+		p           *Provider
+		in          string
+		wantValue   string
+		wantValueFn func(string) bool
+		wantExist   bool
+		wantErr     bool
 	}{
 		{
 			name: "empty store",
@@ -23,6 +24,31 @@ func TestProvider_Provide(t *testing.T) {
 			p:         &Provider{map[string]interface{}{"foo": "bar"}},
 			in:        "foo",
 			wantValue: "bar",
+			wantExist: true,
+		},
+		{
+			name:      "slice value",
+			p:         &Provider{map[string]interface{}{"foo": []int64{1, 2, 3}}},
+			in:        "foo",
+			wantValue: "1,2,3",
+			wantExist: true,
+		},
+		{
+			name: "map value",
+			p: &Provider{
+				map[string]interface{}{
+					"foo": map[string]int64{"foo": 1, "bar": 2},
+				},
+			},
+			in: "foo",
+			wantValueFn: func(got string) bool {
+				switch got {
+				case "foo=1,bar=2", "bar=2,foo=1":
+					return true
+				}
+
+				return false
+			},
 			wantExist: true,
 		},
 		{
@@ -46,7 +72,12 @@ func TestProvider_Provide(t *testing.T) {
 				t.Errorf("Provider.Provide() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if got != tt.wantValue {
+
+			if tt.wantValueFn != nil {
+				if !tt.wantValueFn(got) {
+					t.Errorf("Provider.Provide() got = %v", got)
+				}
+			} else if got != tt.wantValue {
 				t.Errorf("Provider.Provide() got = %v, want %v", got, tt.wantValue)
 			}
 			if got1 != tt.wantExist {

@@ -7,8 +7,15 @@ import (
 	"os"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/upfluence/cfg/provider"
+)
+
+var (
+	i64One   int64 = 1
+	i64Two   int64 = 2
+	i64Three int64 = 3
 )
 
 type mockProvider struct {
@@ -52,6 +59,14 @@ func hasError(t *testing.T, err error) {
 	}
 }
 
+type durationStruct struct {
+	D time.Duration `mock:"d"`
+}
+
+type timeStruct struct {
+	T time.Time `mock:"t"`
+}
+
 func stringPtr(s string) *string { return &s }
 
 type basicStruct1 struct {
@@ -84,6 +99,22 @@ type nestedPtrStruct struct {
 	Nested *nestedV `mock:"nested"`
 }
 
+type sliceStruct struct {
+	Slice []int64 `mock:"slice"`
+}
+
+type slicePtrInt64Struct struct {
+	Slice []*int64 `mock:"slice"`
+}
+
+type stringSliceStruct struct {
+	Strings []string `mock:"strings"`
+}
+
+type mapStringIntStruct struct {
+	Map map[string]int `mock:"map"`
+}
+
 func boolTestCase(in string, out bool) testCase {
 	return testCase{
 		input:         &basicStructBool{},
@@ -96,6 +127,7 @@ func boolTestCase(in string, out bool) testCase {
 
 func deepEqual(x interface{}) func(*testing.T, interface{}) {
 	return func(t *testing.T, y interface{}) {
+		t.Helper()
 		if !reflect.DeepEqual(x, y) {
 			t.Errorf("Expected equality with %v but %v", x, y)
 		}
@@ -140,6 +172,62 @@ func TestConfigurator(t *testing.T) {
 			dataAssertion: deepEqual(&basicStruct2{}),
 			provider:      &mockProvider{st: map[string]string{"Foo": "dwadaw"}},
 			errAssertion:  hasError,
+		},
+		testCase{
+			caseName:      "basic-slice-int64",
+			input:         &sliceStruct{},
+			provider:      &mockProvider{st: map[string]string{"slice": "1,2,3"}},
+			dataAssertion: deepEqual(&sliceStruct{Slice: []int64{1, 2, 3}}),
+			errAssertion:  noError,
+		},
+		testCase{
+			caseName: "basic-slice-ptr-int64",
+			input:    &slicePtrInt64Struct{},
+			provider: &mockProvider{st: map[string]string{"slice": "1,2,3"}},
+			dataAssertion: deepEqual(&slicePtrInt64Struct{
+				Slice: []*int64{&i64One, &i64Two, &i64Three},
+			}),
+			errAssertion: noError,
+		},
+		testCase{
+			caseName: "basic-slice-string-slice",
+			input:    &stringSliceStruct{},
+			provider: &mockProvider{st: map[string]string{"strings": "foo,bar,buz"}},
+			dataAssertion: deepEqual(&stringSliceStruct{
+				Strings: []string{"foo", "bar", "buz"},
+			}),
+			errAssertion: noError,
+		},
+		testCase{
+			caseName: "basic-map",
+			input:    &mapStringIntStruct{},
+			provider: &mockProvider{
+				st: map[string]string{"map": "foo=1,bar=2,buz=3,fiz"},
+			},
+			dataAssertion: deepEqual(&mapStringIntStruct{
+				Map: map[string]int{"foo": 1, "bar": 2, "buz": 3},
+			}),
+			errAssertion: noError,
+		},
+		testCase{
+			caseName: "duration",
+			input:    &durationStruct{},
+			provider: &mockProvider{st: map[string]string{"d": "5m"}},
+			dataAssertion: deepEqual(&durationStruct{
+				D: 5 * time.Minute,
+			}),
+			errAssertion: noError,
+		},
+		testCase{
+			caseName: "time.Time",
+			input:    &timeStruct{},
+			provider: &mockProvider{
+				st: map[string]string{"t": "2019-01-01T01:00:00"},
+			},
+			dataAssertion: deepEqual(
+				&timeStruct{T: time.Date(2019, 1, 1, 1, 0, 0, 0, time.UTC)},
+			),
+			errAssertion: noError,
 		},
 		testCase{
 			caseName:      "basic-ptr",
