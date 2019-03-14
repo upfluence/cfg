@@ -1,11 +1,14 @@
 package cfg
 
 import (
+	"encoding/csv"
 	"fmt"
 	"reflect"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 var (
@@ -135,9 +138,9 @@ func (s *boolParser) parse(value string, ptr bool) (interface{}, error) {
 	var v bool
 
 	switch strings.TrimSpace(value) {
-	case "t", "1", "true":
+	case "t", "1", "true", "yes", "y":
 		v = true
-	case "f", "0", "false":
+	case "f", "0", "false", "no", "n":
 	default:
 		return nil, &ErrNotBoolValue{value: value}
 	}
@@ -218,7 +221,12 @@ type sliceParser struct {
 }
 
 func (sp *sliceParser) parse(v string, ptr bool) (interface{}, error) {
-	args := strings.Split(v, ",")
+	args, err := csv.NewReader(strings.NewReader(v)).Read()
+
+	if err != nil {
+		return nil, errors.Wrapf(err, "%q is not a correct slice value", v)
+	}
+
 	res := reflect.MakeSlice(sp.t, 0, len(args))
 
 	for _, arg := range args {
