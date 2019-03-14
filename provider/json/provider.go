@@ -2,6 +2,7 @@ package json
 
 import (
 	"context"
+	"encoding/csv"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -73,7 +74,13 @@ func stringifyValue(v interface{}) string {
 			vs = append(vs, stringifyValue(vv.Index(i).Interface()))
 		}
 
-		return strings.Join(vs, ",")
+		var b strings.Builder
+
+		if err := csv.NewWriter(&b).Write(vs); err != nil {
+			return strings.Join(vs, ",")
+		}
+
+		return b.String()
 	case reflect.Map:
 		var vs []string
 
