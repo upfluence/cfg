@@ -76,11 +76,19 @@ func stringifyValue(v interface{}) string {
 
 		var b strings.Builder
 
-		if err := csv.NewWriter(&b).Write(vs); err != nil {
+		w := csv.NewWriter(&b)
+
+		if err := w.Write(vs); err != nil {
 			return strings.Join(vs, ",")
 		}
 
-		return b.String()
+		w.Flush()
+
+		if res := b.String(); len(res) > 0 {
+			return res[:len(res)-1]
+		}
+
+		return strings.Join(vs, ",")
 	case reflect.Map:
 		var vs []string
 
