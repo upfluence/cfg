@@ -83,6 +83,8 @@ func (c *configurator) populate(ctx context.Context, p provider.Provider, vVal r
 				v.Set(reflect.New(field.Type.Elem()))
 			}
 
+			ns := ns
+
 			if n != "" {
 				ns = append(ns, n)
 			}
