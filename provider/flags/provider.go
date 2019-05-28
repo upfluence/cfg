@@ -1,7 +1,6 @@
 package flags
 
 import (
-	"context"
 	"os"
 	"strings"
 
@@ -61,13 +60,5 @@ func NewDefaultProvider() provider.Provider {
 }
 
 func NewProvider(args []string) provider.Provider {
-	return &Provider{store: parseFlags(args)}
-}
-
-func (*Provider) StructTag() string { return "flag" }
-
-func (p *Provider) Provide(_ context.Context, v string) (string, bool, error) {
-	var res, ok = p.store[v]
-
-	return res, ok, nil
+	return provider.NewStaticProvider("flag", parseFlags(args), strings.ToLower)
 }
