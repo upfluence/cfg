@@ -326,19 +326,19 @@ func TestPrintDefaults(t *testing.T) {
 	}{
 		{
 			in:  &mapStringIntStruct{},
-			out: "Arguments:\n\t- Map: map[string]integer",
+			out: "Arguments:\n\t- Map: map[string]integer\n",
 		},
 		{
 			in:  &mapStringIntStruct{Map: map[string]int{"fiz": 42}},
-			out: "Arguments:\n\t- Map: map[string]integer (default: map[fiz:42])",
+			out: "Arguments:\n\t- Map: map[string]integer (default: map[fiz:42])\n",
 		},
 		{
 			in:  &nestedPtrStruct{},
-			out: "Arguments:\n\t- Nested.Inner: integer",
+			out: "Arguments:\n\t- Nested.Inner: integer\n",
 		},
 		{
 			in:  &durationStruct{D: 5 * time.Hour},
-			out: "Arguments:\n\t- D: duration (default: 5h0m0s)",
+			out: "Arguments:\n\t- D: duration (default: 5h0m0s)\n",
 		},
 	} {
 		var (
