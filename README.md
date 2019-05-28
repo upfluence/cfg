@@ -1,5 +1,7 @@
 # cfg
 
+[![CircleCI](https://circleci.com/gh/upfluence/cfg.svg?style=svg)](https://circleci.com/gh/upfluence/cfg)
+
 Convinient configuration builder. Inject data straight to your
 configuration struct from various input source (env, flags, files, you
 name it!)
