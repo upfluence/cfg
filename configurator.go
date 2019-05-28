@@ -137,6 +137,7 @@ func (c *configurator) PrintDefaults(in interface{}) error {
 				b.WriteString(")")
 			}
 
+			b.WriteRune('\n')
 			b.WriteTo(c.output)
 
 			return nil
