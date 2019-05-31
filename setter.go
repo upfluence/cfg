@@ -113,6 +113,8 @@ func (factory *defaultSetterFactory) buildSetter(f reflect.StructField) setter {
 }
 
 type setter interface {
+	fmt.Stringer
+
 	set(string, interface{}) error
 }
 
@@ -133,6 +135,8 @@ type ErrNotBoolValue struct {
 func (e *ErrNotBoolValue) Error() string {
 	return fmt.Sprintf("cfg: Can't parse %q in a bool value", e.value)
 }
+
+func (s *boolParser) String() string { return "bool" }
 
 func (s *boolParser) parse(value string, ptr bool) (interface{}, error) {
 	var v bool
@@ -157,6 +161,8 @@ type parserSetter struct {
 	parser parser
 }
 
+func (s *parserSetter) String() string { return s.parser.String() }
+
 func (s *parserSetter) set(value string, target interface{}) error {
 	var t = indirectedValue(reflect.ValueOf(target)).FieldByName(s.field.Name)
 
@@ -172,6 +178,8 @@ func (s *parserSetter) set(value string, target interface{}) error {
 }
 
 type parser interface {
+	fmt.Stringer
+
 	parse(string, bool) (interface{}, error)
 }
 
@@ -181,6 +189,10 @@ type mapParser struct {
 	vp, kp parser
 
 	vptr, kptr bool
+}
+
+func (mp *mapParser) String() string {
+	return fmt.Sprintf("map[%s]%s", mp.kp.String(), mp.vp.String())
 }
 
 func (mp *mapParser) parse(v string, ptr bool) (interface{}, error) {
@@ -220,6 +232,10 @@ type sliceParser struct {
 	ptr bool
 }
 
+func (sp *sliceParser) String() string {
+	return fmt.Sprintf("[]%s", sp.p.String())
+}
+
 func (sp *sliceParser) parse(v string, ptr bool) (interface{}, error) {
 	args, err := csv.NewReader(strings.NewReader(v)).Read()
 
@@ -253,6 +269,8 @@ func (*stringParser) parse(v string, ptr bool) (interface{}, error) {
 	return v, nil
 }
 
+func (*stringParser) String() string { return "string" }
+
 type intTransformer func(int64, bool) interface{}
 
 var intTransformers = map[reflect.Kind]intTransformer{
@@ -278,6 +296,8 @@ type intParser struct {
 	transformer intTransformer
 }
 
+func (*intParser) String() string { return "integer" }
+
 func (s *intParser) parse(value string, ptr bool) (interface{}, error) {
 	var v, err = strconv.ParseInt(value, 10, 0)
 
@@ -289,6 +309,8 @@ func (s *intParser) parse(value string, ptr bool) (interface{}, error) {
 }
 
 type timeParser struct{}
+
+func (timeParser) String() string { return "time" }
 
 func (s timeParser) parse(value string, ptr bool) (interface{}, error) {
 	t, err := time.Parse("2006-01-02T15:04:05", value)
@@ -305,6 +327,8 @@ func (s timeParser) parse(value string, ptr bool) (interface{}, error) {
 }
 
 type durationParser struct{}
+
+func (durationParser) String() string { return "duration" }
 
 func (s durationParser) parse(value string, ptr bool) (interface{}, error) {
 	d, err := time.ParseDuration(value)

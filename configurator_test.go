@@ -1,6 +1,7 @@
 package cfg
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -9,6 +10,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
+	"github.com/upfluence/cfg/internal/walker"
 	"github.com/upfluence/cfg/provider"
 )
 
@@ -290,13 +294,15 @@ func TestConfigurator(t *testing.T) {
 		testCase{
 			input:         nestedPtrStruct{},
 			caseName:      "not_ptr_err",
-			errAssertion:  hasStaticError(ErrShouldBeAStructPtr),
+			provider:      &mockProvider{},
+			errAssertion:  hasStaticError(walker.ErrShouldBeAStructPtr),
 			dataAssertion: func(t *testing.T, y interface{}) {},
 		},
 		testCase{
 			input:         stringPtr("yolo"),
+			provider:      &mockProvider{},
 			caseName:      "not_struct_err",
-			errAssertion:  hasStaticError(ErrShouldBeAStructPtr),
+			errAssertion:  hasStaticError(walker.ErrShouldBeAStructPtr),
 			dataAssertion: func(t *testing.T, y interface{}) {},
 		},
 	} {
@@ -310,6 +316,40 @@ func TestConfigurator(t *testing.T) {
 				tCase.dataAssertion(t, v)
 			},
 		)
+	}
+}
+
+func TestPrintDefaults(t *testing.T) {
+	for _, tt := range []struct {
+		in  interface{}
+		out string
+	}{
+		{
+			in:  &mapStringIntStruct{},
+			out: "Arguments:\n\t- Map: map[string]integer\n",
+		},
+		{
+			in:  &mapStringIntStruct{Map: map[string]int{"fiz": 42}},
+			out: "Arguments:\n\t- Map: map[string]integer (default: map[fiz:42])\n",
+		},
+		{
+			in:  &nestedPtrStruct{},
+			out: "Arguments:\n\t- Nested.Inner: integer\n",
+		},
+		{
+			in:  &durationStruct{D: 5 * time.Hour},
+			out: "Arguments:\n\t- D: duration (default: 5h0m0s)\n",
+		},
+	} {
+		var (
+			b bytes.Buffer
+
+			cfg = &configurator{output: &b, factory: &defaultSetterFactory{}}
+		)
+
+		cfg.PrintDefaults(tt.in)
+
+		assert.Equal(t, tt.out, b.String())
 	}
 }
 
