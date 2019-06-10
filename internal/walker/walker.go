@@ -96,7 +96,7 @@ func walk(v reflect.Value, fn WalkFunc, a *Field) error {
 			continue
 		}
 
-		if sf.Type.Kind() == reflect.Ptr {
+		if sf.Type.Kind() == reflect.Ptr && nv.IsNil() {
 			nv.Set(reflect.New(sf.Type.Elem()))
 		}
 

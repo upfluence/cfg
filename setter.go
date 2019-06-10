@@ -14,12 +14,17 @@ import (
 var (
 	durationType = reflect.TypeOf(time.Duration(0))
 	timeType     = reflect.TypeOf(time.Time{})
+	valueType    = reflect.TypeOf((*Value)(nil)).Elem()
 
 	presetParsers = map[reflect.Type]parser{
 		durationType: durationParser{},
 		timeType:     timeParser{},
 	}
 )
+
+type Value interface {
+	Parse(string) error
+}
 
 type setterFactory interface {
 	buildSetter(reflect.StructField) setter
@@ -109,6 +114,10 @@ func (factory *defaultSetterFactory) buildSetter(f reflect.StructField) setter {
 		return &parserSetter{field: f, parser: p}
 	}
 
+	if f.Type.Implements(valueType) {
+		return &valueSetter{f: f}
+	}
+
 	return nil
 }
 
@@ -116,6 +125,38 @@ type setter interface {
 	fmt.Stringer
 
 	set(string, interface{}) error
+}
+
+type valueSetter struct {
+	f reflect.StructField
+}
+
+func (vs *valueSetter) String() string {
+	return vs.f.Type.Name()
+}
+
+func (vs *valueSetter) set(value string, target interface{}) error {
+	var (
+		ff = indirectedValue(reflect.ValueOf(target)).FieldByName(vs.f.Name)
+
+		rv reflect.Value
+	)
+
+	if ff.Kind() == reflect.Ptr && ff.IsNil() {
+		rv = reflect.New(vs.f.Type.Elem())
+	} else {
+		rv = ff
+	}
+
+	v := rv.Interface().(Value)
+
+	if err := v.Parse(value); err != nil {
+		return err
+	}
+
+	ff.Set(reflect.ValueOf(v))
+
+	return nil
 }
 
 type ErrSetterNotImplemented struct {

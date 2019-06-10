@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"reflect"
 	"testing"
 	"time"
 
@@ -61,6 +60,20 @@ func hasError(t *testing.T, err error) {
 	if err == nil {
 		t.Errorf("Error returned but none returned")
 	}
+}
+
+type subStruct struct {
+	string
+	error
+}
+
+func (ss *subStruct) Parse(v string) error {
+	ss.string = v
+	return ss.error
+}
+
+type valueStruct struct {
+	A *subStruct
 }
 
 type durationStruct struct {
@@ -132,14 +145,16 @@ func boolTestCase(in string, out bool) testCase {
 func deepEqual(x interface{}) func(*testing.T, interface{}) {
 	return func(t *testing.T, y interface{}) {
 		t.Helper()
-		if !reflect.DeepEqual(x, y) {
-			t.Errorf("Expected equality with %v but %v", x, y)
-		}
+
+		assert.Equalf(t, x, y, "Expected equality with %v but %v", x, y)
 	}
 }
 
 func TestConfigurator(t *testing.T) {
-	var errTest = errors.New("test test")
+	var (
+		errTest = errors.New("test test")
+		foo     = "foo"
+	)
 
 	for _, tCase := range []testCase{
 		testCase{
@@ -169,6 +184,22 @@ func TestConfigurator(t *testing.T) {
 			provider:      &mockProvider{st: map[string]string{"Foo": "42"}},
 			dataAssertion: deepEqual(&basicStruct2{42}),
 			errAssertion:  noError,
+		},
+		testCase{
+			input:         &valueStruct{},
+			caseName:      "basic-value",
+			provider:      &mockProvider{st: map[string]string{"A": "foo"}},
+			dataAssertion: deepEqual(&valueStruct{A: &subStruct{string: foo}}),
+			errAssertion:  noError,
+		},
+		testCase{
+			input:    &valueStruct{A: &subStruct{error: errTest}},
+			caseName: "basic-value-wrong",
+			provider: &mockProvider{st: map[string]string{"A": "foo"}},
+			dataAssertion: deepEqual(
+				&valueStruct{A: &subStruct{string: "foo", error: errTest}},
+			),
+			errAssertion: hasError,
 		},
 		testCase{
 			input:         &basicStruct2{},
