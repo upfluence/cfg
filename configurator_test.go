@@ -19,6 +19,8 @@ var (
 	i64One   int64 = 1
 	i64Two   int64 = 2
 	i64Three int64 = 3
+
+	errTest = errors.New("test test")
 )
 
 type mockProvider struct {
@@ -58,22 +60,41 @@ func hasStaticError(out error) func(*testing.T, error) {
 
 func hasError(t *testing.T, err error) {
 	if err == nil {
-		t.Errorf("Error returned but none returned")
+		t.Errorf("Error exected ut none returned")
 	}
 }
 
 type subStruct struct {
 	string
-	error
 }
 
 func (ss *subStruct) Parse(v string) error {
 	ss.string = v
-	return ss.error
+	return nil
+}
+
+type errSubStruct struct{}
+
+func (errSubStruct) Parse(string) error { return errTest }
+
+type errValueStruct struct {
+	A *errSubStruct
+}
+
+type sliceValueStruct struct {
+	A []*subStruct
 }
 
 type valueStruct struct {
 	A *subStruct
+}
+
+type valueTStruct struct {
+	A subStruct
+}
+
+type mapValueStruct struct {
+	A map[string]subStruct
 }
 
 type durationStruct struct {
@@ -152,8 +173,7 @@ func deepEqual(x interface{}) func(*testing.T, interface{}) {
 
 func TestConfigurator(t *testing.T) {
 	var (
-		errTest = errors.New("test test")
-		foo     = "foo"
+		foo = "foo"
 	)
 
 	for _, tCase := range []testCase{
@@ -193,13 +213,36 @@ func TestConfigurator(t *testing.T) {
 			errAssertion:  noError,
 		},
 		testCase{
-			input:    &valueStruct{A: &subStruct{error: errTest}},
-			caseName: "basic-value-wrong",
-			provider: &mockProvider{st: map[string]string{"A": "foo"}},
+			input:         &valueTStruct{},
+			caseName:      "basic-t-value",
+			provider:      &mockProvider{st: map[string]string{"A": "foo"}},
+			dataAssertion: deepEqual(&valueTStruct{A: subStruct{"foo"}}),
+			errAssertion:  noError,
+		},
+		testCase{
+			input:         &errValueStruct{},
+			caseName:      "basic-value-wrong",
+			provider:      &mockProvider{st: map[string]string{"A": "foo"}},
+			dataAssertion: deepEqual(&errValueStruct{}),
+			errAssertion:  hasError,
+		},
+		testCase{
+			input:    &sliceValueStruct{},
+			caseName: "slice-value",
+			provider: &mockProvider{st: map[string]string{"A": "foo,bar,buz"}},
 			dataAssertion: deepEqual(
-				&valueStruct{A: &subStruct{string: "foo", error: errTest}},
+				&sliceValueStruct{A: []*subStruct{{"foo"}, {"bar"}, {"buz"}}},
 			),
-			errAssertion: hasError,
+			errAssertion: noError,
+		},
+		testCase{
+			input:    &mapValueStruct{},
+			caseName: "map-value",
+			provider: &mockProvider{st: map[string]string{"A": "foo=foo,bar=bar"}},
+			dataAssertion: deepEqual(
+				&mapValueStruct{A: map[string]subStruct{"foo": {"foo"}, "bar": {"bar"}}},
+			),
+			errAssertion: noError,
 		},
 		testCase{
 			input:         &basicStruct2{},

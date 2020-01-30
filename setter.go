@@ -50,7 +50,8 @@ func indirectedType(t reflect.Type) reflect.Type {
 
 func (dsf *defaultSetterFactory) buildBasicParser(t reflect.Type) (parser, bool) {
 	var (
-		k = t.Kind()
+		k  = t.Kind()
+		pt = t
 
 		ptr bool
 	)
@@ -58,6 +59,13 @@ func (dsf *defaultSetterFactory) buildBasicParser(t reflect.Type) (parser, bool)
 	if k == reflect.Ptr {
 		k = t.Elem().Kind()
 		ptr = true
+		t = t.Elem()
+	} else {
+		pt = reflect.PtrTo(t)
+	}
+
+	if pt.Implements(valueType) {
+		return &valueParser{t: t}, ptr
 	}
 
 	if p, ok := presetParsers[t]; ok {
@@ -114,10 +122,6 @@ func (factory *defaultSetterFactory) buildSetter(f reflect.StructField) setter {
 		return &parserSetter{field: f, parser: p}
 	}
 
-	if f.Type.Implements(valueType) {
-		return &valueSetter{f: f}
-	}
-
 	return nil
 }
 
@@ -125,38 +129,6 @@ type setter interface {
 	fmt.Stringer
 
 	set(string, interface{}) error
-}
-
-type valueSetter struct {
-	f reflect.StructField
-}
-
-func (vs *valueSetter) String() string {
-	return vs.f.Type.Name()
-}
-
-func (vs *valueSetter) set(value string, target interface{}) error {
-	var (
-		ff = indirectedValue(reflect.ValueOf(target)).FieldByName(vs.f.Name)
-
-		rv reflect.Value
-	)
-
-	if ff.Kind() == reflect.Ptr && ff.IsNil() {
-		rv = reflect.New(vs.f.Type.Elem())
-	} else {
-		rv = ff
-	}
-
-	v := rv.Interface().(Value)
-
-	if err := v.Parse(value); err != nil {
-		return err
-	}
-
-	ff.Set(reflect.ValueOf(v))
-
-	return nil
 }
 
 type ErrSetterNotImplemented struct {
@@ -222,6 +194,26 @@ type parser interface {
 	fmt.Stringer
 
 	parse(string, bool) (interface{}, error)
+}
+
+type valueParser struct {
+	t reflect.Type
+}
+
+func (vp *valueParser) String() string { return vp.t.String() }
+
+func (vp *valueParser) parse(v string, ptr bool) (interface{}, error) {
+	rv := reflect.New(vp.t)
+
+	if err := rv.Interface().(Value).Parse(v); err != nil {
+		return nil, err
+	}
+
+	if ptr {
+		return rv.Interface(), nil
+	}
+
+	return rv.Elem().Interface(), nil
 }
 
 type mapParser struct {
