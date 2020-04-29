@@ -105,6 +105,10 @@ type timeStruct struct {
 	T time.Time `mock:"t"`
 }
 
+type floatStruct struct {
+	F float64 `mock:"f"`
+}
+
 func stringPtr(s string) *string { return &s }
 
 type basicStruct1 struct {
@@ -326,6 +330,13 @@ func TestConfigurator(t *testing.T) {
 			caseName:      "basic-ptr-filled-empty",
 			provider:      &mockProvider{st: map[string]string{"Fiz": ""}},
 			dataAssertion: deepEqual(&basicStruct3{stringPtr("")}),
+			errAssertion:  noError,
+		},
+		testCase{
+			input:         &floatStruct{},
+			caseName:      "basic-float",
+			provider:      &mockProvider{st: map[string]string{"f": "0.5"}},
+			dataAssertion: deepEqual(&floatStruct{F: .5}),
 			errAssertion:  noError,
 		},
 		boolTestCase("t", true),

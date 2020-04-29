@@ -74,11 +74,13 @@ func (dsf *defaultSetterFactory) buildBasicParser(t reflect.Type) (parser, bool)
 
 	switch k {
 	case reflect.String:
-		return &stringParser{}, ptr
+		return stringParser{}, ptr
 	case reflect.Int, reflect.Int64:
 		return &intParser{transformer: intTransformers[k]}, ptr
+	case reflect.Float64:
+		return floatParser{}, ptr
 	case reflect.Bool:
-		return &boolParser{}, ptr
+		return boolParser{}, ptr
 	}
 
 	return nil, false
@@ -149,9 +151,9 @@ func (e *ErrNotBoolValue) Error() string {
 	return fmt.Sprintf("cfg: Can't parse %q in a bool value", e.value)
 }
 
-func (s *boolParser) String() string { return "bool" }
+func (boolParser) String() string { return "bool" }
 
-func (s *boolParser) parse(value string, ptr bool) (interface{}, error) {
+func (boolParser) parse(value string, ptr bool) (interface{}, error) {
 	var v bool
 
 	switch strings.TrimSpace(value) {
@@ -293,7 +295,9 @@ func (sp *sliceParser) parse(v string, ptr bool) (interface{}, error) {
 
 type stringParser struct{}
 
-func (*stringParser) parse(v string, ptr bool) (interface{}, error) {
+func (stringParser) String() string { return "string" }
+
+func (stringParser) parse(v string, ptr bool) (interface{}, error) {
 	if ptr {
 		x := v
 		return &x, nil
@@ -301,8 +305,6 @@ func (*stringParser) parse(v string, ptr bool) (interface{}, error) {
 
 	return v, nil
 }
-
-func (*stringParser) String() string { return "string" }
 
 type intTransformer func(int64, bool) interface{}
 
@@ -323,6 +325,24 @@ var intTransformers = map[reflect.Kind]intTransformer{
 
 		return v
 	},
+}
+
+type floatParser struct{}
+
+func (floatParser) String() string { return "float" }
+
+func (floatParser) parse(value string, ptr bool) (interface{}, error) {
+	var v, err = strconv.ParseFloat(value, 64)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if ptr {
+		return &v, nil
+	}
+
+	return v, nil
 }
 
 type intParser struct {
