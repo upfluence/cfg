@@ -3,6 +3,7 @@ package walker
 import (
 	"errors"
 	"reflect"
+	"unicode"
 )
 
 var (
@@ -84,12 +85,14 @@ func walk(v reflect.Value, fn WalkFunc, a *Field) error {
 			continue
 		}
 
-		switch err := fn(&f); err {
-		case SkipStruct:
-			continue
-		case nil:
-		default:
-			return err
+		if unicode.IsUpper(rune(sf.Name[0])) {
+			switch err := fn(&f); err {
+			case SkipStruct:
+				continue
+			case nil:
+			default:
+				return err
+			}
 		}
 
 		if indirectedType(sf.Type).Kind() != reflect.Struct {

@@ -29,6 +29,10 @@ func dotPath(f *Field) string {
 	return strings.Join(vs, ".")
 }
 
+type foo struct {
+	buz
+}
+
 func TestWalk(t *testing.T) {
 	var (
 		castedBazNil *baz
@@ -74,6 +78,14 @@ func TestWalk(t *testing.T) {
 					[]string{"Struct", "Foo.Struct", "StructPtr", "Foo.StructPtr"},
 					vs,
 				)
+			},
+			errfn: testutil.NoError(),
+		},
+		{
+			name: "foo ptr",
+			in:   &foo{},
+			outfn: func(t *testing.T, vs []string) {
+				assert.Equal(t, []string{"Foo.buz"}, vs)
 			},
 			errfn: testutil.NoError(),
 		},
