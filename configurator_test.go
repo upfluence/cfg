@@ -111,6 +111,14 @@ type floatStruct struct {
 
 func stringPtr(s string) *string { return &s }
 
+type embedStruct1 struct {
+	BasicStruct1
+}
+
+type BasicStruct1 struct {
+	Fiz string
+}
+
 type basicStruct1 struct {
 	Fiz string
 }
@@ -196,6 +204,13 @@ func TestConfigurator(t *testing.T) {
 			errAssertion:  noError,
 		},
 		testCase{
+			input:         &embedStruct1{},
+			caseName:      "basic-no-ptr-filled",
+			provider:      &mockProvider{st: map[string]string{"Fiz": "Bar"}},
+			dataAssertion: deepEqual(&embedStruct1{BasicStruct1: BasicStruct1{"Bar"}}),
+			errAssertion:  noError,
+		},
+		testCase{
 			input:         &basicStruct1{},
 			caseName:      "basic-no-ptr-filled",
 			provider:      &mockProvider{st: map[string]string{"Fiz": "Bar"}},
@@ -213,7 +228,7 @@ func TestConfigurator(t *testing.T) {
 			input:         &valueStruct{},
 			caseName:      "basic-value",
 			provider:      &mockProvider{st: map[string]string{"A": "foo"}},
-			dataAssertion: deepEqual(&valueStruct{A: &subStruct{string: foo}}),
+			dataAssertion: deepEqual(&valueStruct{A: &subStruct{foo}}),
 			errAssertion:  noError,
 		},
 		testCase{

@@ -117,7 +117,7 @@ func (c *configurator) PrintDefaults(in interface{}) error {
 
 			b.WriteString("\t- ")
 
-			fn := buildFieldName(f)
+			fn := buildFieldKey(nil, f)
 			b.WriteString(fn)
 
 			b.WriteString(": ")
@@ -198,6 +198,10 @@ func (c *configurator) walkFunc(ctx context.Context, f *walker.Field) error {
 		}
 	}
 
+	if f.Value.Type().Implements(valueType) {
+		return walker.SkipStruct
+	}
+
 	return nil
 }
 
@@ -218,28 +222,31 @@ func walkFields(f *walker.Field, fn func(reflect.StructField)) {
 }
 
 func buildStructFieldKey(p provider.Provider, sf reflect.StructField) string {
-	if v, ok := sf.Tag.Lookup(p.StructTag()); ok {
-		return v
+	if p != nil {
+		if v, ok := sf.Tag.Lookup(p.StructTag()); ok {
+			return v
+		}
+	}
+
+	if sf.Anonymous {
+		return ""
 	}
 
 	return sf.Name
-
 }
 
 func buildFieldKey(p provider.Provider, f *walker.Field) string {
 	var fs []string
 
 	walkFields(f, func(sf reflect.StructField) {
-		fs = append(fs, buildStructFieldKey(p, sf))
+		if f := buildStructFieldKey(p, sf); f != "" {
+			fs = append(fs, f)
+		}
 	})
 
-	return strings.Join(fs, ".")
-}
-
-func buildFieldName(f *walker.Field) string {
-	var fs []string
-
-	walkFields(f, func(sf reflect.StructField) { fs = append(fs, sf.Name) })
+	if len(fs) == 0 {
+		return "config"
+	}
 
 	return strings.Join(fs, ".")
 }
