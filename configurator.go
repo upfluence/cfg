@@ -30,20 +30,27 @@ type configurator struct {
 }
 
 func NewDefaultConfigurator(providers ...provider.Provider) Configurator {
-	return NewConfigurator(
+	cfg := newConfigurator(
 		append(providers, env.NewDefaultProvider(), flags.NewDefaultProvider())...,
 	)
+
+	cfg.helpKeys = map[string][]string{
+		"flag": []string{"h", "help"},
+		"env":  []string{"HELP"},
+	}
+
+	return cfg
 }
 
 func NewConfigurator(providers ...provider.Provider) Configurator {
+	return newConfigurator(providers...)
+}
+
+func newConfigurator(providers ...provider.Provider) *configurator {
 	return &configurator{
 		providers: providers,
 		factory:   &defaultSetterFactory{},
 		output:    os.Stderr,
-		helpKeys: map[string][]string{
-			"flag": []string{"h", "help"},
-			"env":  []string{"HELP"},
-		},
 	}
 }
 
