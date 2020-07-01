@@ -56,7 +56,7 @@ func (bc *baseCommand) Run(ctx context.Context, cctx CommandContext) error {
 	return bc.Command.Run(ctx, cctx)
 }
 
-const Version = "dirty"
+var Version = "dirty"
 
 type versionCommand struct {
 	name    string
