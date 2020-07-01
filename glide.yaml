@@ -1,8 +1,0 @@
-package: github.com/upfluence/cfg
-import:
-- package: github.com/coreos/etcd
-  vcs: git
-  repo: git@github.com:etcd-io/etcd.git
-  version: 3.3.13
-  subpackages:
-  - client
