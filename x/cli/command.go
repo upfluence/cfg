@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -8,6 +9,8 @@ import (
 	"text/tabwriter"
 
 	"github.com/upfluence/cfg"
+	"github.com/upfluence/cfg/internal/walker"
+	"github.com/upfluence/cfg/provider/flags"
 )
 
 type CommandContext struct {
@@ -27,8 +30,8 @@ type Command interface {
 }
 
 type baseConfig struct {
-	Help    bool `flag:"h"`
-	Version bool `flag:"v"`
+	Help    bool `flag:"h,help" help:"Display this message"`
+	Version bool `flag:"v,version" help:"Display the app version"`
 }
 
 type baseCommand struct {
@@ -204,21 +207,65 @@ func (sc SubCommand) Run(ctx context.Context, cctx CommandContext) error {
 	return cmd.Run(ctx, cctx)
 }
 
+func StaticString(v string) func(io.Writer) (int, error) {
+	return func(w io.Writer) (int, error) { return io.WriteString(w, v) }
+}
+
 type StaticCommand struct {
-	Help     string
-	Synopsis string
+	Help     func(io.Writer) (int, error)
+	Synopsis func(io.Writer) (int, error)
 
 	Execute func(context.Context, CommandContext) error
 }
 
 func (sc StaticCommand) WriteHelp(w io.Writer) (int, error) {
-	return io.WriteString(w, sc.Help)
+	return sc.Help(w)
 }
 
 func (sc StaticCommand) WriteSynopsis(w io.Writer) (int, error) {
-	return io.WriteString(w, sc.Synopsis)
+	return sc.Synopsis(w)
 }
 
 func (sc StaticCommand) Run(ctx context.Context, cctx CommandContext) error {
 	return sc.Execute(ctx, cctx)
+}
+
+func SynopsisWriter(in interface{}) func(io.Writer) (int, error) {
+	return func(w io.Writer) (int, error) {
+		var b bytes.Buffer
+
+		if err := walker.Walk(
+			in,
+			func(f *walker.Field) error {
+				fks := walker.BuildFieldKeys(flags.StructTag, f)
+
+				if len(fks) == 0 {
+					return nil
+				}
+
+				b.WriteRune('[')
+
+				for i, fk := range fks {
+					b.WriteRune('-')
+
+					if len(fk) > 1 {
+						b.WriteRune('-')
+					}
+
+					b.WriteString(fk)
+
+					if i < len(fks)-1 {
+						b.WriteString(", ")
+					}
+				}
+
+				b.WriteString("] ")
+				return nil
+			},
+		); err != nil {
+			return 0, err
+		}
+
+		return w.Write(b.Bytes())
+	}
 }
