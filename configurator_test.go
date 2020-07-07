@@ -1,7 +1,6 @@
 package cfg
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -107,6 +106,10 @@ type timeStruct struct {
 
 type floatStruct struct {
 	F float64 `mock:"f"`
+}
+
+type mutiValuesStruct struct {
+	Foo string `mock:"foo,bar,buz"`
 }
 
 func stringPtr(s string) *string { return &s }
@@ -390,6 +393,42 @@ func TestConfigurator(t *testing.T) {
 			errAssertion: noError,
 		},
 
+		testCase{
+			input:    &mutiValuesStruct{},
+			caseName: "multi value in tag",
+			provider: &mockProvider{st: map[string]string{"fiz": "123"}},
+			dataAssertion: func(t *testing.T, y interface{}) {
+				if v := y.(*mutiValuesStruct).Foo; v != "" {
+					t.Errorf("Wrong result set: %v [ instead of: %v]", v, "")
+				}
+			},
+			errAssertion: noError,
+		},
+
+		testCase{
+			input:    &mutiValuesStruct{},
+			caseName: "multi value in tag",
+			provider: &mockProvider{st: map[string]string{"bar": "123"}},
+			dataAssertion: func(t *testing.T, y interface{}) {
+				if v := y.(*mutiValuesStruct).Foo; v != "123" {
+					t.Errorf("Wrong result set: %v [ instead of: %v]", v, "123")
+				}
+			},
+			errAssertion: noError,
+		},
+
+		testCase{
+			input:    &mutiValuesStruct{},
+			caseName: "multi value in tag",
+			provider: &mockProvider{st: map[string]string{"foo": "123"}},
+			dataAssertion: func(t *testing.T, y interface{}) {
+				if v := y.(*mutiValuesStruct).Foo; v != "123" {
+					t.Errorf("Wrong result set: %v [ instead of: %v]", v, "123")
+				}
+			},
+			errAssertion: noError,
+		},
+
 		// Errors
 		testCase{
 			input:         nestedPtrStruct{},
@@ -416,40 +455,6 @@ func TestConfigurator(t *testing.T) {
 				tCase.dataAssertion(t, v)
 			},
 		)
-	}
-}
-
-func TestPrintDefaults(t *testing.T) {
-	for _, tt := range []struct {
-		in  interface{}
-		out string
-	}{
-		{
-			in:  &mapStringIntStruct{},
-			out: "Arguments:\n\t- Map: map[string]integer\n",
-		},
-		{
-			in:  &mapStringIntStruct{Map: map[string]int{"fiz": 42}},
-			out: "Arguments:\n\t- Map: map[string]integer (default: map[fiz:42])\n",
-		},
-		{
-			in:  &nestedPtrStruct{},
-			out: "Arguments:\n\t- Nested.Inner: integer\n",
-		},
-		{
-			in:  &durationStruct{D: 5 * time.Hour},
-			out: "Arguments:\n\t- D: duration (default: 5h0m0s)\n",
-		},
-	} {
-		var (
-			b bytes.Buffer
-
-			cfg = &configurator{output: &b, factory: &defaultSetterFactory{}}
-		)
-
-		cfg.PrintDefaults(tt.in)
-
-		assert.Equal(t, tt.out, b.String())
 	}
 }
 

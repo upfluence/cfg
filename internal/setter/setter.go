@@ -1,4 +1,4 @@
-package cfg
+package setter
 
 import (
 	"encoding/csv"
@@ -9,46 +9,33 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/upfluence/cfg/internal/reflectutil"
 )
 
 var (
 	durationType = reflect.TypeOf(time.Duration(0))
 	timeType     = reflect.TypeOf(time.Time{})
-	valueType    = reflect.TypeOf((*Value)(nil)).Elem()
+	ValueType    = reflect.TypeOf((*Value)(nil)).Elem()
 
 	presetParsers = map[reflect.Type]parser{
 		durationType: durationParser{},
 		timeType:     timeParser{},
 	}
+
+	DefaultFactory Factory = defaultFactory{}
 )
 
 type Value interface {
 	Parse(string) error
 }
 
-type setterFactory interface {
-	buildSetter(reflect.StructField) setter
+type Factory interface {
+	Build(reflect.StructField) Setter
 }
 
-type defaultSetterFactory struct{}
+type defaultFactory struct{}
 
-func indirectedValue(v reflect.Value) reflect.Value {
-	if v.Type().Kind() == reflect.Ptr {
-		return v.Elem()
-	}
-
-	return v
-}
-
-func indirectedType(t reflect.Type) reflect.Type {
-	if t.Kind() == reflect.Ptr {
-		return t.Elem()
-	}
-
-	return t
-}
-
-func (dsf *defaultSetterFactory) buildBasicParser(t reflect.Type) (parser, bool) {
+func (dsf defaultFactory) buildBasicParser(t reflect.Type) (parser, bool) {
 	var (
 		k  = t.Kind()
 		pt = t
@@ -64,7 +51,7 @@ func (dsf *defaultSetterFactory) buildBasicParser(t reflect.Type) (parser, bool)
 		pt = reflect.PtrTo(t)
 	}
 
-	if pt.Implements(valueType) {
+	if pt.Implements(ValueType) {
 		return &valueParser{t: t}, ptr
 	}
 
@@ -86,7 +73,7 @@ func (dsf *defaultSetterFactory) buildBasicParser(t reflect.Type) (parser, bool)
 	return nil, false
 }
 
-func (dsf *defaultSetterFactory) buildParser(t reflect.Type) parser {
+func (dsf defaultFactory) buildParser(t reflect.Type) parser {
 	k := t.Kind()
 
 	switch k {
@@ -119,18 +106,18 @@ func (dsf *defaultSetterFactory) buildParser(t reflect.Type) parser {
 	return p
 }
 
-func (factory *defaultSetterFactory) buildSetter(f reflect.StructField) setter {
-	if p := factory.buildParser(indirectedType(f.Type)); p != nil {
+func (df defaultFactory) Build(f reflect.StructField) Setter {
+	if p := df.buildParser(reflectutil.IndirectedType(f.Type)); p != nil {
 		return &parserSetter{field: f, parser: p}
 	}
 
 	return nil
 }
 
-type setter interface {
+type Setter interface {
 	fmt.Stringer
 
-	set(string, interface{}) error
+	Set(string, interface{}) error
 }
 
 type ErrSetterNotImplemented struct {
@@ -178,8 +165,8 @@ type parserSetter struct {
 
 func (s *parserSetter) String() string { return s.parser.String() }
 
-func (s *parserSetter) set(value string, target interface{}) error {
-	var t = indirectedValue(reflect.ValueOf(target)).FieldByName(s.field.Name)
+func (s *parserSetter) Set(value string, target interface{}) error {
+	var t = reflectutil.IndirectedValue(reflect.ValueOf(target)).FieldByName(s.field.Name)
 
 	v, err := s.parser.parse(value, t.Type().Kind() == reflect.Ptr)
 
