@@ -7,9 +7,7 @@ import (
 	"github.com/upfluence/cfg/provider"
 )
 
-type Provider struct {
-	store map[string]string
-}
+const StructTag = "flag"
 
 func parseArg(s string) (string, bool) {
 	if len(s) < 2 || s[0] != '-' {
@@ -60,5 +58,20 @@ func NewDefaultProvider() provider.Provider {
 }
 
 func NewProvider(args []string) provider.Provider {
-	return provider.NewStaticProvider("flag", parseFlags(args), strings.ToLower)
+	return provider.KeyFormatterFunc{
+		Provider: provider.NewStaticProvider(
+			StructTag,
+			parseFlags(args),
+			strings.ToLower,
+		),
+		KeyFormatFunc: func(n string) string {
+			n = strings.ToLower(n)
+
+			if len(n) == 1 {
+				return "-" + n
+			}
+
+			return "--" + n
+		},
+	}
 }

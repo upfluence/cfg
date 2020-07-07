@@ -28,9 +28,13 @@ func (p *Provider) buildPrefix() string {
 	return strings.ToUpper(p.prefix) + "_"
 }
 
+func (p *Provider) FormatKey(n string) string {
+	return p.buildPrefix() + strings.ToUpper(strings.Replace(n, ".", "_", -1))
+}
+
 func (p *Provider) Provide(_ context.Context, v string) (string, bool, error) {
 	var (
-		envVar = p.buildPrefix() + strings.ToUpper(strings.Replace(v, ".", "_", -1))
+		envVar = p.FormatKey(v)
 		res    = os.Getenv(envVar)
 	)
 	return res, res != "", nil
