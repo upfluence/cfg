@@ -41,3 +41,19 @@ func (sp *staticProvider) Provide(_ context.Context, k string) (string, bool, er
 
 	return v, ok, nil
 }
+
+type KeyFormatterProvider interface {
+	Provider
+
+	FormatKey(string) string
+}
+
+type KeyFormatterFunc struct {
+	Provider
+
+	KeyFormatFunc func(string) string
+}
+
+func (kff KeyFormatterFunc) FormatKey(n string) string {
+	return kff.KeyFormatFunc(n)
+}
