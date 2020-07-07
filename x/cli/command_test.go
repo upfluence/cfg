@@ -12,8 +12,8 @@ import (
 
 func TestRun(t *testing.T) {
 	staticCmd := StaticCommand{
-		Help:     "help foo",
-		Synopsis: "foo synopsis",
+		Help:     StaticString("help foo"),
+		Synopsis: StaticString("foo synopsis"),
 		Execute: func(_ context.Context, cctx CommandContext) error {
 			_, err := io.WriteString(cctx.Stdout, "success")
 			return err
@@ -22,8 +22,8 @@ func TestRun(t *testing.T) {
 
 	subCmd := SubCommand{
 		"foo": StaticCommand{
-			Help:     "help foo",
-			Synopsis: "foo synopsis",
+			Help:     StaticString("help foo"),
+			Synopsis: StaticString("foo synopsis"),
 			Execute: func(_ context.Context, cctx CommandContext) error {
 				_, err := io.WriteString(cctx.Stdout, "success")
 				return err
