@@ -39,6 +39,7 @@ func (a *App) parseArgs() ([]string, []string) {
 		flags []string
 
 		isFlag bool
+		nested bool
 	)
 
 	for _, arg := range a.args {
@@ -46,9 +47,15 @@ func (a *App) parseArgs() ([]string, []string) {
 			continue
 		}
 
+		if nested {
+			cmds = append(cmds, arg)
+			continue
+		}
+
 		if arg == "--" {
 			isFlag = false
 			cmds = append(cmds, arg)
+			nested = true
 			continue
 		}
 
