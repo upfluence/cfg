@@ -28,6 +28,11 @@ func TestParseArgs(t *testing.T) {
 			wantFlags: []string{"-foo"},
 			wantCmds:  []string{"buz", "--", "biz"},
 		},
+		{
+			in:        []string{"buz", "-foo", "--", "biz", "-fuz"},
+			wantFlags: []string{"-foo"},
+			wantCmds:  []string{"buz", "--", "biz", "-fuz"},
+		},
 	} {
 		a := &App{args: tt.in}
 
