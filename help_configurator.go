@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/upfluence/cfg/internal/reflectutil"
+	"github.com/upfluence/cfg/internal/setter"
 	"github.com/upfluence/cfg/internal/walker"
 	"github.com/upfluence/cfg/provider"
 )
@@ -58,6 +59,10 @@ func (hc *helpConfigurator) printDefaults(in interface{}) error {
 
 			if len(fks) == 0 {
 				return nil
+			}
+
+			if f.Value.Type().Implements(setter.ValueType) {
+				return walker.SkipStruct
 			}
 
 			var b bytes.Buffer
