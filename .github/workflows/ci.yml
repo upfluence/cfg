@@ -19,19 +19,6 @@ jobs:
         with:
           go-version: 1.14.x
 
-      - name: Get Man
-        uses: actions/checkout@v2
-        with:
-          repository: upfluence/man
-          token: ${{ secrets.PAT_TOKEN }}
-          ref: master
-          path: upf-man
-
-      - name: Setup gh-actions-go
-        run: |
-          cd upf-man
-          go install -mod=vendor ./cmd/gh-actions-go-mod
-          git config --global url."https://${{ secrets.PAT_TOKEN }}:x-oauth-basic@github.com/upfluence".insteadOf "https://github.com/upfluence"
       - name: Checkout
         uses: actions/checkout@v2
       - name: Cache Modules
@@ -42,7 +29,4 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
       - name: Run tests
-        run: gh-actions-go-mod -- go test -v ./...
-        env:
-          OKTA_CLIENT_SECRET: ${{ secrets.OKTA_CLIENT_SECRET }}
-          OKTA_CLIENT_ID: ${{ secrets.OKTA_CLIENT_ID }}
+        run: go test -v ./...
