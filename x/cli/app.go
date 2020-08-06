@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"os"
+	"os/exec"
 
 	"github.com/upfluence/cfg"
 	"github.com/upfluence/cfg/provider"
@@ -97,7 +98,10 @@ func (a *App) Run(ctx context.Context) {
 	if err := a.cmd.Run(ctx, a.commandContext()); err != nil {
 		code = 1
 
-		if serr, ok := err.(interface{ StatusCode() int }); ok {
+		switch serr := err.(type) {
+		case *exec.ExitError:
+			os.Exit(serr.ExitCode())
+		case interface{ StatusCode() int }:
 			code = serr.StatusCode()
 		}
 
