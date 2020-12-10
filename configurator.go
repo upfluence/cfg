@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/upfluence/cfg/internal/help"
 	"github.com/upfluence/cfg/internal/setter"
 	"github.com/upfluence/cfg/internal/walker"
 	"github.com/upfluence/cfg/provider"
@@ -27,7 +28,14 @@ func NewDefaultConfigurator(providers ...provider.Provider) Configurator {
 		append(providers, env.NewDefaultProvider(), flags.NewDefaultProvider())...,
 	)
 
-	return &helpConfigurator{configurator: cfg, stderr: os.Stderr}
+	return &helpConfigurator{
+		configurator: cfg,
+		hw: &help.Writer{
+			Providers: cfg.providers,
+			Factory:   cfg.factory,
+		},
+		stderr: os.Stderr,
+	}
 }
 
 func NewConfigurator(providers ...provider.Provider) Configurator {
