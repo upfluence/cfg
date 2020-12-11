@@ -27,7 +27,7 @@ func (hc *helpConfigurator) Populate(ctx context.Context, in interface{}) error 
 	}
 
 	if cfg.Help {
-		hc.PrintDefaults(in)
+		_ = hc.PrintDefaults(in)
 		os.Exit(2)
 	}
 

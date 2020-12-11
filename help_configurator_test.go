@@ -45,8 +45,10 @@ func TestPrintDefaults(t *testing.T) {
 		)
 
 		cfg.stderr = &b
-		cfg.PrintDefaults(tt.in)
 
+		err := cfg.PrintDefaults(tt.in)
+
+		assert.NoError(t, err)
 		assert.Equal(t, tt.out, b.String())
 	}
 }
