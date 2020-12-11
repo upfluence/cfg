@@ -105,7 +105,7 @@ func (a *App) Run(ctx context.Context) {
 			code = serr.StatusCode()
 		}
 
-		io.WriteString(os.Stderr, err.Error())
+		_, _ = io.WriteString(os.Stderr, err.Error()+"\n")
 	}
 
 	os.Stdout.Sync()

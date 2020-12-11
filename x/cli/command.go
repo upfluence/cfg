@@ -9,6 +9,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/upfluence/cfg"
+	"github.com/upfluence/cfg/internal/help"
 	"github.com/upfluence/cfg/internal/walker"
 	"github.com/upfluence/cfg/provider/flags"
 )
@@ -236,6 +237,12 @@ func (sc StaticCommand) WriteSynopsis(w io.Writer) (int, error) {
 
 func (sc StaticCommand) Run(ctx context.Context, cctx CommandContext) error {
 	return sc.Execute(ctx, cctx)
+}
+
+func HelpWriter(in interface{}) func(io.Writer) (int, error) {
+	return func(w io.Writer) (int, error) {
+		return help.DefaultWriter.Write(w, in)
+	}
 }
 
 func SynopsisWriter(in interface{}) func(io.Writer) (int, error) {
