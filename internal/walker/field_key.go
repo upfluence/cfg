@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-func walkFields(f *Field, fn func(reflect.StructField)) {
+func walkFields(f *Field, fn func(reflect.StructField) bool) bool {
 	var (
 		fs = []reflect.StructField{f.Field}
 		a  = f.Ancestor
@@ -17,32 +17,52 @@ func walkFields(f *Field, fn func(reflect.StructField)) {
 	}
 
 	for i := len(fs); i > 0; i-- {
-		fn(fs[i-1])
+		if ok := fn(fs[i-1]); !ok {
+			return false
+		}
 	}
+
+	return true
 }
 
-func buildStructFieldKey(t string, sf reflect.StructField) []string {
+func buildStructFieldKey(t string, sf reflect.StructField) ([]string, bool) {
 	if t != "" {
 		if v, ok := sf.Tag.Lookup(t); ok {
-			return strings.Split(v, ",")
+			switch v {
+			case "":
+			case "-":
+				return nil, false
+			default:
+				return strings.Split(v, ","), true
+			}
 		}
 	}
 
 	if sf.Anonymous {
-		return nil
+		return nil, true
 	}
 
-	return []string{sf.Name}
+	return []string{sf.Name}, true
 }
 
 func BuildFieldKeys(t string, f *Field) []string {
 	var fss [][]string
 
-	walkFields(f, func(sf reflect.StructField) {
-		if fs := buildStructFieldKey(t, sf); len(fs) > 0 {
+	if ok := walkFields(f, func(sf reflect.StructField) bool {
+		fs, ok := buildStructFieldKey(t, sf)
+
+		if !ok {
+			return false
+		}
+
+		if len(fs) > 0 {
 			fss = append(fss, fs)
 		}
-	})
+
+		return true
+	}); !ok {
+		return nil
+	}
 
 	if len(fss) == 0 {
 		return []string{"config"}
