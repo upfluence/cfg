@@ -168,6 +168,10 @@ type mapStringIntStruct struct {
 	Map map[string]int `mock:"map"`
 }
 
+type skipStruct struct {
+	Foo string `mock:"-"`
+}
+
 func boolTestCase(in string, out bool) testCase {
 	return testCase{
 		input:         &basicStructBool{},
@@ -424,6 +428,18 @@ func TestConfigurator(t *testing.T) {
 			dataAssertion: func(t *testing.T, y interface{}) {
 				if v := y.(*mutiValuesStruct).Foo; v != "123" {
 					t.Errorf("Wrong result set: %v [ instead of: %v]", v, "123")
+				}
+			},
+			errAssertion: noError,
+		},
+
+		testCase{
+			input:    &skipStruct{},
+			caseName: "use - to skip providing",
+			provider: &mockProvider{st: map[string]string{"Foo": "123"}},
+			dataAssertion: func(t *testing.T, y interface{}) {
+				if v := y.(*skipStruct).Foo; v != "" {
+					t.Errorf("Wrong result set: %v [ instead of: \"\"]", v)
 				}
 			},
 			errAssertion: noError,
