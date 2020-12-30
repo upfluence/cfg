@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -10,8 +9,7 @@ import (
 
 	"github.com/upfluence/cfg"
 	"github.com/upfluence/cfg/internal/help"
-	"github.com/upfluence/cfg/internal/walker"
-	"github.com/upfluence/cfg/provider/flags"
+	"github.com/upfluence/cfg/internal/synopsis"
 )
 
 type CommandContext struct {
@@ -247,40 +245,6 @@ func HelpWriter(in interface{}) func(io.Writer) (int, error) {
 
 func SynopsisWriter(in interface{}) func(io.Writer) (int, error) {
 	return func(w io.Writer) (int, error) {
-		var b bytes.Buffer
-
-		if err := walker.Walk(
-			in,
-			func(f *walker.Field) error {
-				fks := walker.BuildFieldKeys(flags.StructTag, f)
-
-				if len(fks) == 0 {
-					return nil
-				}
-
-				b.WriteRune('[')
-
-				for i, fk := range fks {
-					b.WriteRune('-')
-
-					if len(fk) > 1 {
-						b.WriteRune('-')
-					}
-
-					b.WriteString(fk)
-
-					if i < len(fks)-1 {
-						b.WriteString(", ")
-					}
-				}
-
-				b.WriteString("] ")
-				return nil
-			},
-		); err != nil {
-			return 0, err
-		}
-
-		return w.Write(b.Bytes())
+		return synopsis.DefaultWriter.Write(w, in)
 	}
 }
