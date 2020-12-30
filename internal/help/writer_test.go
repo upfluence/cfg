@@ -16,8 +16,15 @@ type mapStringIntStruct struct {
 }
 
 type nestedStruct struct {
-	Sub mapStringIntStruct `env:"-" flag:"-"`
+	Sub    mapStringIntStruct `env:"-" flag:"-"`
+	Parser parserImpl
 }
+
+type parserImpl struct {
+	Foo string
+}
+
+func (*parserImpl) Parse(string) error { return nil }
 
 func TestPrintDefaults(t *testing.T) {
 	for _, tt := range []struct {
@@ -34,7 +41,7 @@ func TestPrintDefaults(t *testing.T) {
 		},
 		{
 			in:  &nestedStruct{},
-			out: "Arguments:\n",
+			out: "Arguments:\n\t- Parser: help.parserImpl (env: PARSER, flag: --parser)\n",
 		},
 	} {
 		var (
