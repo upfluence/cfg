@@ -8,11 +8,15 @@ import (
 )
 
 type helpStructConfig struct {
-	Yolo string `help:"this is the help message" flag:"yolo,y"`
+	Yolo string `help:"this is the help message" flag:"yolo,y" env:"-"`
 }
 
 type mapStringIntStruct struct {
 	Map map[string]int `mock:"map"`
+}
+
+type nestedStruct struct {
+	Sub mapStringIntStruct `env:"-" flag:"-"`
 }
 
 func TestPrintDefaults(t *testing.T) {
@@ -26,7 +30,11 @@ func TestPrintDefaults(t *testing.T) {
 		},
 		{
 			in:  &helpStructConfig{},
-			out: "Arguments:\n\t- Yolo: string this is the help message (env: YOLO, flag: --yolo, -y)\n",
+			out: "Arguments:\n\t- Yolo: string this is the help message (flag: --yolo, -y)\n",
+		},
+		{
+			in:  &nestedStruct{},
+			out: "Arguments:\n",
 		},
 	} {
 		var (

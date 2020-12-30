@@ -105,11 +105,13 @@ func (w *Writer) Write(out io.Writer, in interface{}) (int, error) {
 				}
 			}
 
-			if len(providedKeys) > 0 {
-				b.WriteString(" (")
-				b.WriteString(strings.Join(providedKeys, ", "))
-				b.WriteString(")")
+			if len(providedKeys) == 0 {
+				return nil
 			}
+
+			b.WriteString(" (")
+			b.WriteString(strings.Join(providedKeys, ", "))
+			b.WriteString(")")
 
 			b.WriteRune('\n')
 
