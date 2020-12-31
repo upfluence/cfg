@@ -53,11 +53,11 @@ func parseFlags(args []string) map[string]string {
 	return res
 }
 
-func NewDefaultProvider() provider.Provider {
+func NewDefaultProvider() provider.KeyFormatterProvider {
 	return NewProvider(os.Args[1:])
 }
 
-func NewProvider(args []string) provider.Provider {
+func NewProvider(args []string) provider.KeyFormatterProvider {
 	return provider.KeyFormatterFunc{
 		Provider: provider.NewStaticProvider(
 			StructTag,
