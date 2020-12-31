@@ -22,6 +22,14 @@ func IsZero(v reflect.Value) bool {
 		}
 
 		return IsZero(v.Elem())
+	case reflect.Struct:
+		for i := 0; i < v.Type().NumField(); i++ {
+			if !IsZero(v.Field(i)) {
+				return false
+			}
+		}
+
+		return true
 	}
 
 	return false

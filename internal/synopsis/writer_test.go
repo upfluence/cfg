@@ -1,4 +1,4 @@
-package help
+package synopsis
 
 import (
 	"bytes"
@@ -8,16 +8,17 @@ import (
 )
 
 type helpStructConfig struct {
-	Yolo string `help:"this is the help message" flag:"yolo,y" env:"-"`
+	Yolo string `flag:"yolo,y"`
+	Bar  string
 }
 
 type mapStringIntStruct struct {
-	Map map[string]int `mock:"map"`
+	Map map[string]int `flag:"map"`
 }
 
 type nestedStruct struct {
-	Sub    mapStringIntStruct `env:"-" flag:"-"`
-	Parser parserImpl
+	Sub    mapStringIntStruct `flag:"-"`
+	Parser *parserImpl
 }
 
 type parserImpl struct {
@@ -33,15 +34,15 @@ func TestPrintDefaults(t *testing.T) {
 	}{
 		{
 			in:  &mapStringIntStruct{Map: map[string]int{"fiz": 42}},
-			out: "Arguments:\n\t- Map: map[string]integer (default: map[fiz:42]) (env: MAP, flag: --map)\n",
+			out: "[--map] ",
 		},
 		{
 			in:  &helpStructConfig{},
-			out: "Arguments:\n\t- Yolo: string this is the help message (flag: --yolo, -y)\n",
+			out: "[--yolo, -y] [--bar] ",
 		},
 		{
 			in:  &nestedStruct{},
-			out: "Arguments:\n\t- Parser: help.parserImpl (env: PARSER, flag: --parser)\n",
+			out: "[--parser] ",
 		},
 	} {
 		var (
