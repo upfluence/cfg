@@ -26,7 +26,7 @@ func (w *Writer) Write(out io.Writer, in interface{}) (int, error) {
 	if err := walker.Walk(
 		in,
 		func(f *walker.Field) error {
-			if s := w.Factory.Build(f.Field); s == nil {
+			if s := w.Factory.Build(f.Field.Type); s == nil {
 				return nil
 			}
 

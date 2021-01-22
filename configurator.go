@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/upfluence/cfg/internal/help"
+	"github.com/upfluence/cfg/internal/reflectutil"
 	"github.com/upfluence/cfg/internal/setter"
 	"github.com/upfluence/cfg/internal/walker"
 	"github.com/upfluence/cfg/provider"
@@ -30,11 +31,8 @@ func NewDefaultConfigurator(providers ...provider.Provider) Configurator {
 
 	return &helpConfigurator{
 		configurator: cfg,
-		hw: &help.Writer{
-			Providers: cfg.providers,
-			Factory:   cfg.factory,
-		},
-		stderr: os.Stderr,
+		hw:           &help.Writer{Providers: cfg.providers, Factory: cfg.factory},
+		stderr:       os.Stderr,
 	}
 }
 
@@ -57,7 +55,7 @@ func (c *configurator) Populate(ctx context.Context, in interface{}) error {
 }
 
 func (c *configurator) walkFunc(ctx context.Context, f *walker.Field) error {
-	s := c.factory.Build(f.Field)
+	s := c.factory.Build(f.Field.Type)
 
 	if s == nil {
 		return nil
@@ -91,7 +89,10 @@ func (c *configurator) walkFunc(ctx context.Context, f *walker.Field) error {
 			continue
 		}
 
-		if err := s.Set(v, f.Value.Interface()); err != nil {
+		if err := s.Set(
+			v,
+			reflectutil.IndirectedValue(f.Value).FieldByName(f.Field.Name),
+		); err != nil {
 			return err
 		}
 	}
