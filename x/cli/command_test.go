@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"regexp"
 	"testing"
@@ -26,6 +27,24 @@ func TestRun(t *testing.T) {
 			Synopsis: StaticString("foo synopsis"),
 			Execute: func(_ context.Context, cctx CommandContext) error {
 				_, err := io.WriteString(cctx.Stdout, "success")
+				return err
+			},
+		},
+	}
+
+	argCmd := ArgumentCommand{
+		Variable: "buz",
+		Command: StaticCommand{
+			Execute: func(ctx context.Context, cctx CommandContext) error {
+				var c = struct {
+					Buz string `arg:"buz"`
+				}{}
+
+				if err := cctx.Configurator.Populate(ctx, &c); err != nil {
+					return err
+				}
+
+				_, err := fmt.Fprintf(cctx.Stdout, "<%s>", c.Buz)
 				return err
 			},
 		},
@@ -65,6 +84,16 @@ version      Print the app version
 		{
 			opts:    []Option{WithCommand(staticCmd)},
 			wantOut: "success",
+		},
+		{
+			opts:    []Option{WithCommand(argCmd)},
+			args:    []string{"foo", "-y"},
+			wantOut: "<foo>",
+		},
+		{
+			opts:    []Option{WithCommand(argCmd)},
+			args:    []string{"-y"},
+			wantErr: "no argument found for variable \"buz\", follow the synopsys: ",
 		},
 		{
 			args:    []string{"foo"},
