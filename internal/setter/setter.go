@@ -17,13 +17,27 @@ var (
 	timeType     = reflect.TypeOf(time.Time{})
 	ValueType    = reflect.TypeOf((*Value)(nil)).Elem()
 
-	presetParsers = map[reflect.Type]parser{
-		durationType: durationParser{},
-		timeType:     timeParser{},
+	presetParsers = map[reflect.Type]func(factoryOptions) parser{
+		durationType: func(factoryOptions) parser { return durationParser{} },
+		timeType: func(fo factoryOptions) parser {
+			return timeParser{opts: fo.tpo}
+		},
 	}
 
-	DefaultFactory Factory = defaultFactory{}
+	defaultFactoryOptions = factoryOptions{tpo: defaultTimeParserOption}
+
+	DefaultFactory Factory = NewDefaultFactory()
 )
+
+type factoryOptions struct {
+	tpo timeParserOption
+}
+
+func WithDateFormat(fmt string) FactoryOption {
+	return func(opts *factoryOptions) { opts.tpo.dateFmt = fmt }
+}
+
+type FactoryOption func(*factoryOptions)
 
 type Value interface {
 	Parse(string) error
@@ -33,9 +47,21 @@ type Factory interface {
 	Build(reflect.Type) Setter
 }
 
-type defaultFactory struct{}
+type defaultFactory struct {
+	opts factoryOptions
+}
 
-func (dsf defaultFactory) buildBasicParser(t reflect.Type) (parser, bool) {
+func NewDefaultFactory(opts ...FactoryOption) Factory {
+	var o = defaultFactoryOptions
+
+	for _, opt := range opts {
+		opt(&o)
+	}
+
+	return &defaultFactory{opts: o}
+}
+
+func (dsf *defaultFactory) buildBasicParser(t reflect.Type) (parser, bool) {
 	var (
 		k  = t.Kind()
 		pt = t
@@ -56,7 +82,7 @@ func (dsf defaultFactory) buildBasicParser(t reflect.Type) (parser, bool) {
 	}
 
 	if p, ok := presetParsers[t]; ok {
-		return p, ptr
+		return p(dsf.opts), ptr
 	}
 
 	switch k {
@@ -73,7 +99,7 @@ func (dsf defaultFactory) buildBasicParser(t reflect.Type) (parser, bool) {
 	return nil, false
 }
 
-func (dsf defaultFactory) buildParser(t reflect.Type) parser {
+func (dsf *defaultFactory) buildParser(t reflect.Type) parser {
 	k := t.Kind()
 
 	switch k {
@@ -106,7 +132,7 @@ func (dsf defaultFactory) buildParser(t reflect.Type) parser {
 	return p
 }
 
-func (df defaultFactory) Build(t reflect.Type) Setter {
+func (df *defaultFactory) Build(t reflect.Type) Setter {
 	if p := df.buildParser(reflectutil.IndirectedType(t)); p != nil {
 		return &parserSetter{parser: p}
 	}
@@ -345,12 +371,20 @@ func (s *intParser) parse(value string, ptr bool) (interface{}, error) {
 	return s.transformer(v, ptr), nil
 }
 
-type timeParser struct{}
+type timeParserOption struct {
+	dateFmt string
+}
+
+var defaultTimeParserOption = timeParserOption{dateFmt: "2006-01-02T15:04:05"}
+
+type timeParser struct {
+	opts timeParserOption
+}
 
 func (timeParser) String() string { return "time" }
 
-func (s timeParser) parse(value string, ptr bool) (interface{}, error) {
-	t, err := time.Parse("2006-01-02T15:04:05", value)
+func (tp timeParser) parse(value string, ptr bool) (interface{}, error) {
+	t, err := time.Parse(tp.opts.dateFmt, value)
 
 	if err != nil {
 		return nil, err
