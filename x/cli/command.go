@@ -16,6 +16,16 @@ type CommandContext struct {
 	Stdin  io.Reader
 	Stdout io.Writer
 	Stderr io.Writer
+
+	args map[string]string
+}
+
+type argProvider map[string]string
+
+func (ap argProvider) StructTag() string { return "arg" }
+func (ap argProvider) Provide(_ context.Context, k string) (string, bool, error) {
+	v, ok := ap[k]
+	return v, ok, nil
 }
 
 type Command interface {
