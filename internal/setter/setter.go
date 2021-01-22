@@ -30,7 +30,7 @@ type Value interface {
 }
 
 type Factory interface {
-	Build(reflect.StructField) Setter
+	Build(reflect.Type) Setter
 }
 
 type defaultFactory struct{}
@@ -106,9 +106,9 @@ func (dsf defaultFactory) buildParser(t reflect.Type) parser {
 	return p
 }
 
-func (df defaultFactory) Build(f reflect.StructField) Setter {
-	if p := df.buildParser(reflectutil.IndirectedType(f.Type)); p != nil {
-		return &parserSetter{field: f, parser: p}
+func (df defaultFactory) Build(t reflect.Type) Setter {
+	if p := df.buildParser(reflectutil.IndirectedType(t)); p != nil {
+		return &parserSetter{parser: p}
 	}
 
 	return nil
@@ -117,7 +117,7 @@ func (df defaultFactory) Build(f reflect.StructField) Setter {
 type Setter interface {
 	fmt.Stringer
 
-	Set(string, interface{}) error
+	Set(string, reflect.Value) error
 }
 
 type ErrSetterNotImplemented struct {
@@ -159,15 +159,12 @@ func (boolParser) parse(value string, ptr bool) (interface{}, error) {
 }
 
 type parserSetter struct {
-	field  reflect.StructField
 	parser parser
 }
 
 func (s *parserSetter) String() string { return s.parser.String() }
 
-func (s *parserSetter) Set(value string, target interface{}) error {
-	var t = reflectutil.IndirectedValue(reflect.ValueOf(target)).FieldByName(s.field.Name)
-
+func (s *parserSetter) Set(value string, t reflect.Value) error {
 	v, err := s.parser.parse(value, t.Type().Kind() == reflect.Ptr)
 
 	if err != nil {
