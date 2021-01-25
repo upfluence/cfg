@@ -61,7 +61,7 @@ func NewDefaultFactory(opts ...FactoryOption) Factory {
 	return &defaultFactory{opts: o}
 }
 
-func (dsf *defaultFactory) buildBasicParser(t reflect.Type) (parser, bool) {
+func (df *defaultFactory) buildBasicParser(t reflect.Type) (parser, bool) {
 	var (
 		k  = t.Kind()
 		pt = t
@@ -82,7 +82,7 @@ func (dsf *defaultFactory) buildBasicParser(t reflect.Type) (parser, bool) {
 	}
 
 	if p, ok := presetParsers[t]; ok {
-		return p(dsf.opts), ptr
+		return p(df.opts), ptr
 	}
 
 	switch k {
@@ -99,12 +99,12 @@ func (dsf *defaultFactory) buildBasicParser(t reflect.Type) (parser, bool) {
 	return nil, false
 }
 
-func (dsf *defaultFactory) buildParser(t reflect.Type) parser {
+func (df *defaultFactory) buildParser(t reflect.Type) parser {
 	k := t.Kind()
 
 	switch k {
 	case reflect.Slice:
-		p, ptr := dsf.buildBasicParser(t.Elem())
+		p, ptr := df.buildBasicParser(t.Elem())
 
 		if p == nil {
 			return nil
@@ -112,13 +112,13 @@ func (dsf *defaultFactory) buildParser(t reflect.Type) parser {
 
 		return &sliceParser{p: p, t: t, ptr: ptr}
 	case reflect.Map:
-		vp, vptr := dsf.buildBasicParser(t.Elem())
+		vp, vptr := df.buildBasicParser(t.Elem())
 
 		if vp == nil {
 			return nil
 		}
 
-		kp, kptr := dsf.buildBasicParser(t.Key())
+		kp, kptr := df.buildBasicParser(t.Key())
 
 		if kp == nil {
 			return nil
@@ -127,7 +127,7 @@ func (dsf *defaultFactory) buildParser(t reflect.Type) parser {
 		return &mapParser{t: t, vp: vp, vptr: vptr, kp: kp, kptr: kptr}
 	}
 
-	p, _ := dsf.buildBasicParser(t)
+	p, _ := df.buildBasicParser(t)
 
 	return p
 }
