@@ -79,16 +79,22 @@ func (a *App) parseArgs() ([]string, []string) {
 }
 
 func (a *App) commandContext() CommandContext {
-	cmds, flags := a.parseArgs()
+	var (
+		cmds, flags = a.parseArgs()
+		args        = make(map[string]string)
+		ps          = append(
+			[]provider.Provider{pflags.NewProvider(flags), argProvider(args)},
+			a.ps...,
+		)
+	)
 
 	return CommandContext{
-		Configurator: cfg.NewConfigurator(
-			append([]provider.Provider{pflags.NewProvider(flags)}, a.ps...)...,
-		),
-		Args:   cmds,
-		Stdin:  os.Stdin,
-		Stdout: os.Stdout,
-		Stderr: os.Stderr,
+		Configurator: cfg.NewConfigurator(ps...),
+		Args:         cmds,
+		Stdin:        os.Stdin,
+		Stdout:       os.Stdout,
+		Stderr:       os.Stderr,
+		args:         args,
 	}
 }
 
