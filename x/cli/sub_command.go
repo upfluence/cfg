@@ -11,7 +11,7 @@ import (
 type SubCommand map[string]Command
 
 func (sc SubCommand) WriteHelp(w io.Writer) (int, error) {
-	n, err := io.WriteString(w, "Sub commands available: \n")
+	n, err := io.WriteString(w, "Available sub commands: \n")
 
 	if err != nil {
 		return n, err

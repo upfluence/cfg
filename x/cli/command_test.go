@@ -93,7 +93,7 @@ version      Print the app version
 		{
 			opts:    []Option{WithCommand(argCmd)},
 			args:    []string{"-y"},
-			wantErr: "no argument found for variable \"buz\", follow the synopsys: ",
+			wantErr: "no argument found for variable \"buz\", follow the synopsis: ",
 		},
 		{
 			args:    []string{"foo"},
@@ -111,7 +111,7 @@ version Print the app version `,
 		{
 			args: []string{"-h"},
 			opts: []Option{WithCommand(subCmd)},
-			wantOut: `Sub commands available:
+			wantOut: `Available sub commands:
 foo help foo foo synopsis
 help Print this message
 version Print the app version `,

@@ -23,7 +23,7 @@ func (sc ArgumentCommand) Run(ctx context.Context, cctx CommandContext) error {
 	if len(cctx.Args) == 0 {
 		if _, err := fmt.Fprintf(
 			cctx.Stderr,
-			"no argument found for variable %q, follow the synopsys:\n",
+			"no argument found for variable %q, follow the synopsis:\n",
 			sc.Variable,
 		); err != nil {
 			return err
