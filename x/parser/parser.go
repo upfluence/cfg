@@ -14,13 +14,13 @@ var (
 	WithDateFormat = setter.WithDateFormat
 )
 
-type ParserOption = setter.FactoryOption
+type Option = setter.FactoryOption
 
 type Parser struct {
 	sf setter.Factory
 }
 
-func NewParser(opts ...ParserOption) *Parser {
+func NewParser(opts ...Option) *Parser {
 	return &Parser{sf: setter.NewDefaultFactory(opts...)}
 }
 
@@ -34,6 +34,6 @@ func (p *Parser) Parse(data string, target interface{}) error {
 	return p.sf.Build(v.Type()).Set(data, reflectutil.IndirectedValue(v))
 }
 
-func Parse(data string, target interface{}, opts ...ParserOption) error {
+func Parse(data string, target interface{}, opts ...Option) error {
 	return NewParser(opts...).Parse(data, target)
 }
