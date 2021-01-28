@@ -13,9 +13,9 @@ type versionCommand struct {
 	version string
 }
 
-func (vc *versionCommand) WriteSynopsis(io.Writer) (int, error) { return 0, nil }
+func (vc *versionCommand) WriteSynopsis(io.Writer, IntrospectionOptions) (int, error) { return 0, nil }
 
-func (vc *versionCommand) WriteHelp(w io.Writer) (int, error) {
+func (vc *versionCommand) WriteHelp(w io.Writer, _ IntrospectionOptions) (int, error) {
 	return io.WriteString(w, "Print the app version")
 }
 

@@ -2,11 +2,10 @@ package cli
 
 import (
 	"context"
+	"fmt"
 	"io"
 
 	"github.com/upfluence/cfg"
-	"github.com/upfluence/cfg/internal/help"
-	"github.com/upfluence/cfg/internal/synopsis"
 )
 
 type CommandContext struct {
@@ -16,6 +15,8 @@ type CommandContext struct {
 	Stdin  io.Reader
 	Stdout io.Writer
 	Stderr io.Writer
+
+	Definitions []CommandDefinition
 
 	args map[string]string
 }
@@ -29,8 +30,8 @@ func (ap argProvider) Provide(_ context.Context, k string) (string, bool, error)
 }
 
 type Command interface {
-	WriteSynopsis(io.Writer) (int, error)
-	WriteHelp(io.Writer) (int, error)
+	WriteSynopsis(io.Writer, IntrospectionOptions) (int, error)
+	WriteHelp(io.Writer, IntrospectionOptions) (int, error)
 
 	Run(context.Context, CommandContext) error
 }
@@ -62,21 +63,10 @@ func (bc *baseCommand) Run(ctx context.Context, cctx CommandContext) error {
 		return bc.helpCmd.Run(ctx, cctx)
 	}
 
+	if bc.Command == nil {
+		_, err := fmt.Fprintf(cctx.Stderr, "command not implemented")
+		return err
+	}
+
 	return bc.Command.Run(ctx, cctx)
-}
-
-func StaticString(v string) func(io.Writer) (int, error) {
-	return func(w io.Writer) (int, error) { return io.WriteString(w, v) }
-}
-
-func HelpWriter(in interface{}) func(io.Writer) (int, error) {
-	return func(w io.Writer) (int, error) {
-		return help.DefaultWriter.Write(w, in)
-	}
-}
-
-func SynopsisWriter(in interface{}) func(io.Writer) (int, error) {
-	return func(w io.Writer) (int, error) {
-		return synopsis.DefaultWriter.Write(w, in)
-	}
 }

@@ -21,16 +21,7 @@ func TestRun(t *testing.T) {
 		},
 	}
 
-	subCmd := SubCommand{
-		"foo": StaticCommand{
-			Help:     StaticString("help foo"),
-			Synopsis: StaticString("foo synopsis"),
-			Execute: func(_ context.Context, cctx CommandContext) error {
-				_, err := io.WriteString(cctx.Stdout, "success")
-				return err
-			},
-		},
-	}
+	subCmd := SubCommand{Commands: map[string]Command{"foo": staticCmd}}
 
 	argCmd := ArgumentCommand{
 		Variable: "buz",
@@ -74,7 +65,7 @@ version      Print the app version
 		},
 		{
 			args:    []string{"-h"},
-			wantOut: defaultHelp,
+			wantErr: defaultHelp,
 		},
 		{
 			args:    []string{"-v"},
@@ -91,9 +82,15 @@ version      Print the app version
 			wantOut: "<foo>",
 		},
 		{
+			opts: []Option{WithCommand(argCmd)},
+			args: []string{"-y"},
+			wantErr: `no argument found for variable "buz", follow the synopsis:
+<buz> `,
+		},
+		{
 			opts:    []Option{WithCommand(argCmd)},
-			args:    []string{"-y"},
-			wantErr: "no argument found for variable \"buz\", follow the synopsis: ",
+			args:    []string{"-h"},
+			wantErr: "usage: <buz> ",
 		},
 		{
 			args:    []string{"foo"},
@@ -104,15 +101,16 @@ version      Print the app version
 			args: []string{"buz"},
 			opts: []Option{WithCommand(subCmd)},
 			wantErr: `unknown command "buz", available commands:
-foo help foo foo synopsis
+foo help foo
 help Print this message
 version Print the app version `,
 		},
 		{
 			args: []string{"-h"},
 			opts: []Option{WithCommand(subCmd)},
-			wantOut: `Available sub commands:
-foo help foo foo synopsis
+			wantErr: `usage: <arg_1>
+Available sub commands:
+foo help foo
 help Print this message
 version Print the app version `,
 		},
