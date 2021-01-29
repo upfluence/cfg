@@ -31,97 +31,103 @@ type Writer struct {
 	Factory   setter.Factory
 }
 
-func (w *Writer) Write(out io.Writer, in interface{}) (int, error) {
+func (w *Writer) Write(out io.Writer, ins ...interface{}) (int, error) {
 	n, err := out.Write(defaultHeaders)
 
 	if err != nil {
 		return n, err
 	}
 
-	err = walker.Walk(
-		in,
-		func(f *walker.Field) error {
-			s := w.Factory.Build(f.Field.Type)
+	for _, in := range ins {
+		err = walker.Walk(
+			in,
+			func(f *walker.Field) error {
+				s := w.Factory.Build(f.Field.Type)
 
-			if s == nil {
-				return nil
-			}
-
-			fks := walker.BuildFieldKeys("", f)
-
-			if len(fks) == 0 {
-				return nil
-			}
-
-			if f.Value.Type().Implements(setter.ValueType) {
-				return walker.SkipStruct
-			}
-
-			var b bytes.Buffer
-
-			b.WriteString("\t- ")
-
-			b.WriteString(fks[0])
-
-			b.WriteString(": ")
-			b.WriteString(s.String())
-
-			if h, ok := f.Field.Tag.Lookup("help"); ok {
-				b.WriteString(" ")
-				b.WriteString(h)
-			}
-
-			fv := reflectutil.IndirectedValue(f.Value).FieldByName(f.Field.Name)
-			if !reflectutil.IsZero(fv) {
-				v := reflectutil.IndirectedValue(fv).Interface()
-
-				b.WriteString(" (default: ")
-
-				if ss, ok := v.(fmt.Stringer); ok {
-					b.WriteString(ss.String())
-				} else {
-					fmt.Fprintf(&b, "%+v", v)
+				if s == nil {
+					return nil
 				}
 
+				fks := walker.BuildFieldKeys("", f)
+
+				if len(fks) == 0 {
+					return nil
+				}
+
+				if f.Value.Type().Implements(setter.ValueType) {
+					return walker.SkipStruct
+				}
+
+				var b bytes.Buffer
+
+				b.WriteString("\t- ")
+
+				b.WriteString(fks[0])
+
+				b.WriteString(": ")
+				b.WriteString(s.String())
+
+				if h, ok := f.Field.Tag.Lookup("help"); ok {
+					b.WriteString(" ")
+					b.WriteString(h)
+				}
+
+				fv := reflectutil.IndirectedValue(f.Value).FieldByName(f.Field.Name)
+				if !reflectutil.IsZero(fv) {
+					v := reflectutil.IndirectedValue(fv).Interface()
+
+					b.WriteString(" (default: ")
+
+					if ss, ok := v.(fmt.Stringer); ok {
+						b.WriteString(ss.String())
+					} else {
+						fmt.Fprintf(&b, "%+v", v)
+					}
+
+					b.WriteString(")")
+				}
+
+				var providedKeys []string
+
+				for _, p := range w.Providers {
+					if kf, ok := p.(provider.KeyFormatterProvider); ok {
+						var ks []string
+
+						for _, k := range walker.BuildFieldKeys(p.StructTag(), f) {
+							ks = append(ks, kf.FormatKey(k))
+						}
+
+						if len(ks) > 0 {
+							providedKeys = append(
+								providedKeys,
+								fmt.Sprintf("%s: %s", p.StructTag(), strings.Join(ks, ", ")),
+							)
+						}
+					}
+				}
+
+				if len(providedKeys) == 0 {
+					return nil
+				}
+
+				b.WriteString(" (")
+				b.WriteString(strings.Join(providedKeys, ", "))
 				b.WriteString(")")
-			}
 
-			var providedKeys []string
+				b.WriteRune('\n')
 
-			for _, p := range w.Providers {
-				if kf, ok := p.(provider.KeyFormatterProvider); ok {
-					var ks []string
+				nn, err := b.WriteTo(out)
 
-					for _, k := range walker.BuildFieldKeys(p.StructTag(), f) {
-						ks = append(ks, kf.FormatKey(k))
-					}
+				n += int(nn)
 
-					if len(ks) > 0 {
-						providedKeys = append(
-							providedKeys,
-							fmt.Sprintf("%s: %s", p.StructTag(), strings.Join(ks, ", ")),
-						)
-					}
-				}
-			}
+				return err
+			},
+		)
 
-			if len(providedKeys) == 0 {
-				return nil
-			}
+		if err != nil {
+			return n, err
+		}
+	}
 
-			b.WriteString(" (")
-			b.WriteString(strings.Join(providedKeys, ", "))
-			b.WriteString(")")
-
-			b.WriteRune('\n')
-
-			nn, err := b.WriteTo(out)
-
-			n += int(nn)
-
-			return err
-		},
-	)
-
-	return n, err
+	return n, nil
 }
