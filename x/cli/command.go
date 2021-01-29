@@ -26,6 +26,7 @@ func (cctx CommandContext) introspectionOptions() IntrospectionOptions {
 	return IntrospectionOptions{
 		AppName:     cctx.appName,
 		Definitions: cctx.Definitions,
+		args:        cctx.args,
 	}
 }
 

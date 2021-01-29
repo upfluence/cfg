@@ -161,6 +161,10 @@ func (sc SubCommand) Run(ctx context.Context, cctx CommandContext) error {
 	if len(cctx.Args) > 0 {
 		cmdKey = cctx.Args[0]
 		args = cctx.Args[1:]
+
+		if sc.Variable != "" {
+			cctx.args[sc.Variable] = cmdKey
+		}
 	}
 
 	cmd, ok := sc.Commands[cmdKey]

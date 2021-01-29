@@ -17,6 +17,16 @@ type IntrospectionOptions struct {
 	AppName     string
 	Definitions []CommandDefinition
 	Short       bool
+
+	args map[string]string
+}
+
+func (io IntrospectionOptions) argName(arg string) string {
+	if v, ok := io.args[arg]; ok {
+		return v
+	}
+
+	return fmt.Sprintf("<%s>", arg)
 }
 
 func (io IntrospectionOptions) withDefinition(def CommandDefinition) IntrospectionOptions {
@@ -24,6 +34,7 @@ func (io IntrospectionOptions) withDefinition(def CommandDefinition) Introspecti
 		AppName:     io.AppName,
 		Definitions: append(io.Definitions, def),
 		Short:       io.Short,
+		args:        io.args,
 	}
 }
 
@@ -130,7 +141,7 @@ func writeSynopsis(w io.Writer, opts IntrospectionOptions) (int, error) {
 
 	for _, def := range opts.Definitions {
 		for _, arg := range def.Args {
-			nn, err := fmt.Fprintf(w, "<%s> ", arg)
+			nn, err := fmt.Fprintf(w, "%s ", opts.argName(arg))
 			n += nn
 
 			if err != nil {
