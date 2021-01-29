@@ -14,12 +14,14 @@ type CommandDefinition struct {
 }
 
 type IntrospectionOptions struct {
+	AppName     string
 	Definitions []CommandDefinition
 	Short       bool
 }
 
 func (io IntrospectionOptions) withDefinition(def CommandDefinition) IntrospectionOptions {
 	return IntrospectionOptions{
+		AppName:     io.AppName,
 		Definitions: append(io.Definitions, def),
 		Short:       io.Short,
 	}
@@ -28,8 +30,31 @@ func (io IntrospectionOptions) withDefinition(def CommandDefinition) Introspecti
 type IntrospectionFunc func(io.Writer, IntrospectionOptions) (int, error)
 
 func StaticString(v string) IntrospectionFunc {
-	return func(w io.Writer, _ IntrospectionOptions) (int, error) {
-		return io.WriteString(w, v)
+	return func(w io.Writer, opts IntrospectionOptions) (int, error) {
+		var n int
+
+		if !opts.Short {
+			nn, err := writeUsage(w, opts)
+			n += nn
+
+			if err != nil {
+				return n, err
+			}
+
+			if nn > 0 {
+				nn, err = io.WriteString(w, "\n")
+				n += nn
+
+				if err != nil {
+					return n, err
+				}
+			}
+		}
+
+		nn, err := io.WriteString(w, v)
+		n += nn
+
+		return n, err
 	}
 }
 
@@ -44,6 +69,10 @@ func HelpWriter(in interface{}) IntrospectionFunc {
 
 func writeHelp(w io.Writer, opts IntrospectionOptions) (int, error) {
 	var n int
+
+	if len(opts.Definitions) == 0 {
+		return 0, nil
+	}
 
 	nn, err := io.WriteString(w, "usage: ")
 	n += nn
@@ -62,20 +91,20 @@ func writeHelp(w io.Writer, opts IntrospectionOptions) (int, error) {
 	nn, err = io.WriteString(w, "\n")
 	n += nn
 
-	if err != nil || len(opts.Definitions) == 0 {
+	if err != nil {
 		return n, err
 	}
 
-	for _, c := range opts.Definitions[len(opts.Definitions)-1].Configs {
-		nn, err := help.DefaultWriter.Write(w, c)
-		n += nn
+	var cfgs []interface{}
 
-		if err != nil {
-			return n, err
-		}
+	for _, def := range opts.Definitions {
+		cfgs = append(cfgs, def.Configs...)
 	}
 
-	return n, nil
+	nn, err = help.DefaultWriter.Write(w, cfgs...)
+	n += nn
+
+	return n, err
 }
 
 func SynopsisWriter(in interface{}) IntrospectionFunc {
@@ -89,6 +118,15 @@ func SynopsisWriter(in interface{}) IntrospectionFunc {
 
 func writeSynopsis(w io.Writer, opts IntrospectionOptions) (int, error) {
 	var n int
+
+	if opts.AppName != "" {
+		nn, err := fmt.Fprintf(w, "%s ", opts.AppName)
+		n += nn
+
+		if err != nil {
+			return n, err
+		}
+	}
 
 	for _, def := range opts.Definitions {
 		for _, arg := range def.Args {

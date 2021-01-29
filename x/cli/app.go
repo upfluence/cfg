@@ -95,6 +95,7 @@ func (a *App) commandContext() CommandContext {
 		Stdout:       os.Stdout,
 		Stderr:       os.Stderr,
 		args:         args,
+		appName:      a.name,
 	}
 }
 

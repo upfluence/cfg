@@ -32,11 +32,7 @@ func (sc ArgumentCommand) Run(ctx context.Context, cctx CommandContext) error {
 		}
 
 		if ok {
-			_, err := sc.WriteHelp(
-				cctx.Stderr,
-				IntrospectionOptions{Definitions: cctx.Definitions},
-			)
-
+			_, err := sc.WriteHelp(cctx.Stderr, cctx.introspectionOptions())
 			return err
 		}
 
@@ -48,11 +44,7 @@ func (sc ArgumentCommand) Run(ctx context.Context, cctx CommandContext) error {
 			return err
 		}
 
-		_, err = sc.WriteSynopsis(
-			cctx.Stderr,
-			IntrospectionOptions{Definitions: cctx.Definitions},
-		)
-
+		_, err = sc.WriteSynopsis(cctx.Stderr, cctx.introspectionOptions())
 		return err
 	}
 

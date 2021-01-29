@@ -26,11 +26,7 @@ func (hc *helpCommand) Run(_ context.Context, cctx CommandContext) error {
 		writeTo = StaticString(defaultHelp)
 	}
 
-	_, err := writeTo(
-		cctx.Stderr,
-		IntrospectionOptions{Definitions: cctx.Definitions},
-	)
-
+	_, err := writeTo(cctx.Stderr, cctx.introspectionOptions())
 	return err
 }
 

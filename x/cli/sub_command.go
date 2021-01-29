@@ -117,8 +117,7 @@ func (sc SubCommand) WriteSynopsis(w io.Writer, opts IntrospectionOptions) (int,
 		ks = make([]string, 0, len(sc.Commands))
 	)
 
-	opts = opts.withDefinition(sc.definition(opts.Definitions))
-	opts.Short = true
+	opts = IntrospectionOptions{Short: true}
 
 	for k := range sc.Commands {
 		ks = append(ks, k)
@@ -175,11 +174,7 @@ func (sc SubCommand) Run(ctx context.Context, cctx CommandContext) error {
 			}
 
 			if ok {
-				_, err := sc.WriteHelp(
-					cctx.Stderr,
-					IntrospectionOptions{Definitions: cctx.Definitions},
-				)
-
+				_, err = sc.WriteHelp(cctx.Stderr, cctx.introspectionOptions())
 				return err
 			}
 		}
@@ -192,11 +187,7 @@ func (sc SubCommand) Run(ctx context.Context, cctx CommandContext) error {
 			return err
 		}
 
-		_, err := sc.WriteSynopsis(
-			cctx.Stderr,
-			IntrospectionOptions{Definitions: cctx.Definitions},
-		)
-
+		_, err := sc.WriteSynopsis(cctx.Stderr, cctx.introspectionOptions())
 		return err
 	}
 

@@ -18,7 +18,15 @@ type CommandContext struct {
 
 	Definitions []CommandDefinition
 
-	args map[string]string
+	args    map[string]string
+	appName string
+}
+
+func (cctx CommandContext) introspectionOptions() IntrospectionOptions {
+	return IntrospectionOptions{
+		AppName:     cctx.appName,
+		Definitions: cctx.Definitions,
+	}
 }
 
 type argProvider map[string]string
