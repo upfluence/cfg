@@ -6,26 +6,26 @@ import (
 )
 
 type StaticCommand struct {
-	Help     func(io.Writer) (int, error)
-	Synopsis func(io.Writer) (int, error)
+	Help     IntrospectionFunc
+	Synopsis IntrospectionFunc
 
 	Execute func(context.Context, CommandContext) error
 }
 
-func (sc StaticCommand) WriteHelp(w io.Writer) (int, error) {
+func (sc StaticCommand) WriteHelp(w io.Writer, opts IntrospectionOptions) (int, error) {
 	if sc.Help == nil {
-		return io.WriteString(w, "no help provided")
+		return writeUsage(w, opts)
 	}
 
-	return sc.Help(w)
+	return sc.Help(w, opts)
 }
 
-func (sc StaticCommand) WriteSynopsis(w io.Writer) (int, error) {
+func (sc StaticCommand) WriteSynopsis(w io.Writer, opts IntrospectionOptions) (int, error) {
 	if sc.Synopsis == nil {
-		return 0, nil
+		return writeSynopsis(w, opts)
 	}
 
-	return sc.Synopsis(w)
+	return sc.Synopsis(w, opts)
 }
 
 func (sc StaticCommand) Run(ctx context.Context, cctx CommandContext) error {

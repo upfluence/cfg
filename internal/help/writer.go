@@ -31,14 +31,10 @@ type Writer struct {
 	Factory   setter.Factory
 }
 
-func (w *Writer) Write(out io.Writer, in interface{}) (int, error) {
-	n, err := out.Write(defaultHeaders)
+func (w *Writer) writeConfig(out io.Writer, in interface{}) (int, error) {
+	var n int
 
-	if err != nil {
-		return n, err
-	}
-
-	err = walker.Walk(
+	return n, walker.Walk(
 		in,
 		func(f *walker.Field) error {
 			s := w.Factory.Build(f.Field.Type)
@@ -122,6 +118,23 @@ func (w *Writer) Write(out io.Writer, in interface{}) (int, error) {
 			return err
 		},
 	)
+}
 
-	return n, err
+func (w *Writer) Write(out io.Writer, ins ...interface{}) (int, error) {
+	n, err := out.Write(defaultHeaders)
+
+	if err != nil {
+		return n, err
+	}
+
+	for _, in := range ins {
+		nn, err := w.writeConfig(out, in)
+		n += nn
+
+		if err != nil {
+			return n, err
+		}
+	}
+
+	return n, nil
 }

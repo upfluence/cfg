@@ -11,23 +11,50 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type mockConfig1 struct {
+	Example string `flag:"e,example"`
+}
+
+type mockConfig2 struct {
+	Other string `flag:"o,other"`
+}
+
+type mockCommand struct {
+	Command
+}
+
+func (mc *mockCommand) WriteHelp(w io.Writer, opts IntrospectionOptions) (int, error) {
+	return mc.Command.WriteHelp(
+		w,
+		opts.withDefinition(
+			CommandDefinition{Configs: []interface{}{&mockConfig1{}}},
+		),
+	)
+}
+
 func TestRun(t *testing.T) {
 	staticCmd := StaticCommand{
 		Help:     StaticString("help foo"),
-		Synopsis: StaticString("foo synopsis"),
+		Synopsis: SynopsisWriter(&mockConfig1{}),
 		Execute: func(_ context.Context, cctx CommandContext) error {
 			_, err := io.WriteString(cctx.Stdout, "success")
 			return err
 		},
 	}
 
-	subCmd := SubCommand{
-		"foo": StaticCommand{
-			Help:     StaticString("help foo"),
-			Synopsis: StaticString("foo synopsis"),
-			Execute: func(_ context.Context, cctx CommandContext) error {
-				_, err := io.WriteString(cctx.Stdout, "success")
-				return err
+	subCmd := SubCommand{Commands: map[string]Command{"foo": staticCmd}}
+	nestedCmd := SubCommand{
+		Commands: map[string]Command{
+			"foo": subCmd,
+			"bar": &mockCommand{
+				Command: StaticCommand{
+					Help:     HelpWriter(&mockConfig2{}),
+					Synopsis: SynopsisWriter(&mockConfig2{}),
+					Execute: func(_ context.Context, cctx CommandContext) error {
+						_, err := io.WriteString(cctx.Stdout, "success")
+						return err
+					},
+				},
 			},
 		},
 	}
@@ -74,7 +101,7 @@ version      Print the app version
 		},
 		{
 			args:    []string{"-h"},
-			wantOut: defaultHelp,
+			wantErr: defaultHelp,
 		},
 		{
 			args:    []string{"-v"},
@@ -91,9 +118,15 @@ version      Print the app version
 			wantOut: "<foo>",
 		},
 		{
+			opts: []Option{WithCommand(argCmd)},
+			args: []string{"-y"},
+			wantErr: `no argument found for variable "buz", follow the synopsis:
+cli-test <buz> `,
+		},
+		{
 			opts:    []Option{WithCommand(argCmd)},
-			args:    []string{"-y"},
-			wantErr: "no argument found for variable \"buz\", follow the synopsis: ",
+			args:    []string{"-h"},
+			wantErr: "usage: cli-test <buz> ",
 		},
 		{
 			args:    []string{"foo"},
@@ -104,24 +137,57 @@ version      Print the app version
 			args: []string{"buz"},
 			opts: []Option{WithCommand(subCmd)},
 			wantErr: `unknown command "buz", available commands:
-foo help foo foo synopsis
+foo help foo
 help Print this message
 version Print the app version `,
 		},
 		{
 			args: []string{"-h"},
 			opts: []Option{WithCommand(subCmd)},
-			wantOut: `Available sub commands:
-foo help foo foo synopsis
+			wantErr: `usage: cli-test <arg_1>
+Available sub commands:
+foo help foo
 help Print this message
 version Print the app version `,
+		},
+		{
+			args: []string{"-h"},
+			opts: []Option{WithCommand(nestedCmd)},
+			wantErr: `usage: cli-test <arg_1>
+Available sub commands:
+bar usage: [-e, --example] [-o, --other]
+foo usage: <arg_1>
+help Print this message
+version Print the app version `,
+		},
+		{
+			args: []string{"foo", "-h"},
+			opts: []Option{WithCommand(nestedCmd)},
+			wantErr: `usage: cli-test <arg_1> <arg_2>
+Available sub commands:
+foo help foo
+help Print this message
+version Print the app version `,
+		},
+		{
+			args: []string{"bar", "-h"},
+			opts: []Option{WithCommand(nestedCmd)},
+			wantErr: `usage: cli-test <arg_1> [-e, --example] [-o, --other]
+Arguments:
+- Example: string (env: EXAMPLE, flag: -e, --example)
+- Other: string (env: OTHER, flag: -o, --other) `,
+		},
+		{
+			args:    []string{"foo", "foo", "-h"},
+			opts:    []Option{WithCommand(nestedCmd)},
+			wantErr: `usage: cli-test <arg_1> <arg_2> help foo`,
 		},
 	} {
 		var (
 			outBuf bytes.Buffer
 			errBuf bytes.Buffer
 
-			a = NewApp(tt.opts...)
+			a = NewApp(append([]Option{WithName("cli-test")}, tt.opts...)...)
 		)
 
 		a.args = tt.args
