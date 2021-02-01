@@ -28,7 +28,6 @@ func (sc SubCommand) variable(defs []CommandDefinition) string {
 	}
 
 	return fmt.Sprintf("arg_%d", n+1)
-
 }
 
 func (sc SubCommand) definition(defs []CommandDefinition) CommandDefinition {
