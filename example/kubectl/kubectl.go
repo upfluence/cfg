@@ -8,9 +8,9 @@ import (
 )
 
 type config struct {
-	Namespace     string `flag:"n,namespace"`
-	RessourceType string `arg:"resource_type"`
-	RessourceName string `arg:"resource_name"`
+	Namespace     string `flag:"n,namespace" help:"namespace for this entity"`
+	RessourceType string `arg:"resource_type" flag:"-" env:"-"`
+	RessourceName string `arg:"resource_name" flag:"-" env:"-"`
 }
 
 type leafCommandExecutor string
@@ -34,14 +34,15 @@ func (lce leafCommandExecutor) execute(ctx context.Context, cctx cli.CommandCont
 	return nil
 }
 
-func buildObjectCommand(cmd, desc string) cli.Command {
+func buildObjectCommand(cmd string, eh cli.EnhancedHelp) cli.Command {
 	return cli.ArgumentCommand{
 		Variable: "resource_type",
 		Command: cli.ArgumentCommand{
 			Variable: "resource_name",
 			Command: cli.StaticCommand{
-				Help:    cli.StaticString(desc),
-				Execute: leafCommandExecutor(cmd).execute,
+				Help:     eh.WriteHelp,
+				Synopsis: eh.WriteSynopsis,
+				Execute:  leafCommandExecutor(cmd).execute,
 			},
 		},
 	}
@@ -54,8 +55,22 @@ func main() {
 			cli.SubCommand{
 				Variable: "verb",
 				Commands: map[string]cli.Command{
-					"describe": buildObjectCommand("describe", "describe remote object"),
-					"edit":     buildObjectCommand("edit", "edit remote object"),
+					"describe": buildObjectCommand(
+						"describe",
+						cli.EnhancedHelp{
+							Short:  "describe remote object",
+							Long:   "this is the long help of this command",
+							Config: &config{},
+						},
+					),
+					"edit": buildObjectCommand(
+						"edit",
+						cli.EnhancedHelp{
+							Short:  "edit remote object",
+							Long:   "this is the long help of this command",
+							Config: &config{},
+						},
+					),
 				},
 			},
 		),
