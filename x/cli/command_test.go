@@ -42,6 +42,12 @@ func TestRun(t *testing.T) {
 		},
 	}
 
+	eh := EnhancedHelp{
+		Short:  "enhanced short help",
+		Long:   "enhanced long help",
+		Config: &mockConfig2{},
+	}
+
 	subCmd := SubCommand{Commands: map[string]Command{"foo": staticCmd}}
 	nestedCmd := SubCommand{
 		Commands: map[string]Command{
@@ -50,6 +56,16 @@ func TestRun(t *testing.T) {
 				Command: StaticCommand{
 					Help:     HelpWriter(&mockConfig2{}),
 					Synopsis: SynopsisWriter(&mockConfig2{}),
+					Execute: func(_ context.Context, cctx CommandContext) error {
+						_, err := io.WriteString(cctx.Stdout, "success")
+						return err
+					},
+				},
+			},
+			"buz": &mockCommand{
+				Command: StaticCommand{
+					Help:     eh.WriteHelp,
+					Synopsis: eh.WriteSynopsis,
 					Execute: func(_ context.Context, cctx CommandContext) error {
 						_, err := io.WriteString(cctx.Stdout, "success")
 						return err
@@ -156,6 +172,7 @@ version Print the app version `,
 			wantErr: `usage: cli-test <arg_1>
 Available sub commands:
 bar usage: [-e, --example] [-o, --other]
+buz enhanced short help
 foo usage: <arg_1>
 help Print this message
 version Print the app version `,
@@ -173,6 +190,17 @@ version Print the app version `,
 			args: []string{"bar", "-h"},
 			opts: []Option{WithCommand(nestedCmd)},
 			wantErr: `usage: cli-test <arg_1> [-e, --example] [-o, --other]
+Arguments:
+- Example: string (env: EXAMPLE, flag: -e, --example)
+- Other: string (env: OTHER, flag: -o, --other) `,
+		},
+		{
+			args: []string{"buz", "-h"},
+			opts: []Option{WithCommand(nestedCmd)},
+			wantErr: `Description:
+enhanced long help
+Usage:
+cli-test <arg_1> [-e, --example] [-o, --other]
 Arguments:
 - Example: string (env: EXAMPLE, flag: -e, --example)
 - Other: string (env: OTHER, flag: -o, --other) `,

@@ -91,7 +91,7 @@ func (sc SubCommand) WriteHelp(w io.Writer, opts IntrospectionOptions) (int, err
 		}
 	}
 
-	nn, err := io.WriteString(w, "Available sub commands: \n")
+	nn, err := io.WriteString(w, "\nAvailable sub commands: \n")
 	n += nn
 
 	if err != nil {

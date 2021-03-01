@@ -106,16 +106,20 @@ func writeHelp(w io.Writer, opts IntrospectionOptions) (int, error) {
 		return n, err
 	}
 
+	nn, err = writeOptions(w, opts)
+	n += nn
+
+	return n, err
+}
+
+func writeOptions(w io.Writer, opts IntrospectionOptions) (int, error) {
 	var cfgs []interface{}
 
 	for _, def := range opts.Definitions {
 		cfgs = append(cfgs, def.Configs...)
 	}
 
-	nn, err = help.DefaultWriter.Write(w, cfgs...)
-	n += nn
-
-	return n, err
+	return help.DefaultWriter.Write(w, cfgs...)
 }
 
 func SynopsisWriter(in interface{}) IntrospectionFunc {
@@ -166,4 +170,79 @@ func writeUsage(w io.Writer, opts IntrospectionOptions) (int, error) {
 	opts.Short = true
 
 	return writeHelp(w, opts)
+}
+
+type EnhancedHelp struct {
+	Short string
+	Long  string
+
+	Config interface{}
+}
+
+func (eh EnhancedHelp) wrapOptions(opts IntrospectionOptions) IntrospectionOptions {
+	if eh.Config == nil {
+		return opts
+	}
+
+	return opts.withDefinition(
+		CommandDefinition{Configs: []interface{}{eh.Config}},
+	)
+}
+
+func (eh EnhancedHelp) WriteHelp(w io.Writer, opts IntrospectionOptions) (int, error) {
+	if opts.Short {
+		return io.WriteString(w, eh.Short)
+	}
+
+	n, err := io.WriteString(w, "Description:\n\n")
+
+	if err != nil {
+		return n, err
+	}
+
+	nn, err := io.WriteString(w, eh.Long)
+	n += nn
+
+	if err != nil {
+		return n, err
+	}
+
+	opts = eh.wrapOptions(opts)
+
+	nn, err = io.WriteString(w, "\n\n")
+	n += nn
+
+	if err != nil {
+		return n, err
+	}
+
+	nn, err = io.WriteString(w, "Usage:\n\t")
+	n += nn
+
+	if err != nil {
+		return n, err
+	}
+
+	nn, err = writeSynopsis(w, opts)
+	n += nn
+
+	if err != nil {
+		return n, err
+	}
+
+	nn, err = io.WriteString(w, "\n\n")
+	n += nn
+
+	if err != nil {
+		return n, err
+	}
+
+	nn, err = writeOptions(w, opts)
+	n += nn
+
+	return n, err
+}
+
+func (eh EnhancedHelp) WriteSynopsis(w io.Writer, opts IntrospectionOptions) (int, error) {
+	return writeSynopsis(w, eh.wrapOptions(opts))
 }
