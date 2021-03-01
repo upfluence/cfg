@@ -4,31 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
-
-	"github.com/upfluence/cfg"
 )
-
-type CommandContext struct {
-	Configurator cfg.Configurator
-	Args         []string
-
-	Stdin  io.Reader
-	Stdout io.Writer
-	Stderr io.Writer
-
-	Definitions []CommandDefinition
-
-	args    map[string]string
-	appName string
-}
-
-func (cctx CommandContext) introspectionOptions() IntrospectionOptions {
-	return IntrospectionOptions{
-		AppName:     cctx.appName,
-		Definitions: cctx.Definitions,
-		args:        cctx.args,
-	}
-}
 
 type argProvider map[string]string
 

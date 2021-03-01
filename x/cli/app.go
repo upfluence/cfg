@@ -88,15 +88,7 @@ func (a *App) commandContext() CommandContext {
 		)
 	)
 
-	return CommandContext{
-		Configurator: cfg.NewConfigurator(ps...),
-		Args:         cmds,
-		Stdin:        os.Stdin,
-		Stdout:       os.Stdout,
-		Stderr:       os.Stderr,
-		args:         args,
-		appName:      a.name,
-	}
+	return newCommandContext(a.name, cmds, args, cfg.NewConfigurator(ps...))
 }
 
 func (a *App) Run(ctx context.Context) {
