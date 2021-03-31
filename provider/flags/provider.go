@@ -2,6 +2,7 @@ package flags
 
 import (
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/upfluence/cfg/provider"
@@ -33,14 +34,30 @@ func parseFlags(args []string) map[string]string {
 
 	for _, arg := range args {
 		if v, ok := parseArg(arg); ok {
-			key = v
 			val := "true"
-			inParam = true
 
-			if strings.HasPrefix(v, "no-") && len(v) > 3 {
-				key = strings.TrimPrefix(v, "no-")
-				val = "false"
+			if strings.Contains(v, "=") {
+				if inParam {
+					res[key] = val
+				}
+
+				vs := strings.SplitN(v, "=", 2)
 				inParam = false
+				key = vs[0]
+				val = vs[1]
+
+				if v, err := strconv.Unquote(val); err == nil {
+					val = v
+				}
+			} else {
+				key = v
+				inParam = true
+
+				if strings.HasPrefix(v, "no-") && len(v) > 3 {
+					key = strings.TrimPrefix(v, "no-")
+					val = "false"
+					inParam = false
+				}
 			}
 
 			res[key] = val
