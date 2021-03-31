@@ -33,6 +33,16 @@ func TestParseArgs(t *testing.T) {
 			wantFlags: []string{"-foo"},
 			wantCmds:  []string{"buz", "--", "biz", "-fuz"},
 		},
+		{
+			in:        []string{"--namespace", "foo", "buz", "-foo"},
+			wantFlags: []string{"--namespace", "foo", "-foo"},
+			wantCmds:  []string{"buz"},
+		},
+		{
+			in:        []string{"--namespace=\"foo\"", "buz", "-foo"},
+			wantFlags: []string{"--namespace=\"foo\"", "-foo"},
+			wantCmds:  []string{"buz"},
+		},
 	} {
 		a := &App{args: tt.in}
 

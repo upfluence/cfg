@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/upfluence/cfg"
 	"github.com/upfluence/cfg/provider"
@@ -63,6 +64,11 @@ func (a *App) parseArgs() ([]string, []string) {
 		if arg[0] == '-' {
 			isFlag = true
 			flags = append(flags, arg)
+
+			if strings.Contains(arg, "=") {
+				isFlag = false
+			}
+
 			continue
 		}
 
