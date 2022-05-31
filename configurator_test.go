@@ -168,6 +168,14 @@ type mapStringIntStruct struct {
 	Map map[string]int `mock:"map"`
 }
 
+type mapStringStringStruct struct {
+	Map map[string]string `mock:"map"`
+}
+
+type mapStringStringsStruct struct {
+	Map map[string][]string `mock:"map"`
+}
+
 type skipStruct struct {
 	Foo string `mock:"-"`
 }
@@ -310,6 +318,28 @@ func TestConfigurator(t *testing.T) {
 			},
 			dataAssertion: deepEqual(&mapStringIntStruct{
 				Map: map[string]int{"foo": 1, "bar": 2, "buz": 3},
+			}),
+			errAssertion: noError,
+		},
+		testCase{
+			caseName: "advanced-map",
+			input:    &mapStringStringStruct{},
+			provider: &mockProvider{
+				st: map[string]string{"map": "foo='nested=k,v=z'"},
+			},
+			dataAssertion: deepEqual(&mapStringStringStruct{
+				Map: map[string]string{"foo": "nested=k,v=z"},
+			}),
+			errAssertion: noError,
+		},
+		testCase{
+			caseName: "advanced-map-2",
+			input:    &mapStringStringsStruct{},
+			provider: &mockProvider{
+				st: map[string]string{"map": "foo='bar,buz',buz=biz"},
+			},
+			dataAssertion: deepEqual(&mapStringStringsStruct{
+				Map: map[string][]string{"foo": {"bar", "buz"}, "buz": {"biz"}},
 			}),
 			errAssertion: noError,
 		},
