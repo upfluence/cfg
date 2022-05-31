@@ -1,7 +1,6 @@
 package setter
 
 import (
-	"encoding/csv"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -10,6 +9,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/upfluence/cfg/internal/reflectutil"
+	"github.com/upfluence/cfg/internal/stringutil"
 )
 
 var (
@@ -99,7 +99,7 @@ func (df *defaultFactory) buildBasicParser(t reflect.Type) (parser, bool) {
 	return nil, false
 }
 
-func (df *defaultFactory) buildParser(t reflect.Type) parser {
+func (df *defaultFactory) buildParser(t reflect.Type) (parser, bool) {
 	k := t.Kind()
 
 	switch k {
@@ -107,33 +107,31 @@ func (df *defaultFactory) buildParser(t reflect.Type) parser {
 		p, ptr := df.buildBasicParser(t.Elem())
 
 		if p == nil {
-			return nil
+			return nil, false
 		}
 
-		return &sliceParser{p: p, t: t, ptr: ptr}
+		return &sliceParser{p: p, t: t, ptr: ptr}, false
 	case reflect.Map:
-		vp, vptr := df.buildBasicParser(t.Elem())
+		vp, vptr := df.buildParser(t.Elem())
 
 		if vp == nil {
-			return nil
+			return nil, false
 		}
 
 		kp, kptr := df.buildBasicParser(t.Key())
 
 		if kp == nil {
-			return nil
+			return nil, false
 		}
 
-		return &mapParser{t: t, vp: vp, vptr: vptr, kp: kp, kptr: kptr}
+		return &mapParser{t: t, vp: vp, vptr: vptr, kp: kp, kptr: kptr}, false
 	}
 
-	p, _ := df.buildBasicParser(t)
-
-	return p
+	return df.buildBasicParser(t)
 }
 
 func (df *defaultFactory) Build(t reflect.Type) Setter {
-	if p := df.buildParser(reflectutil.IndirectedType(t)); p != nil {
+	if p, _ := df.buildParser(reflectutil.IndirectedType(t)); p != nil {
 		return &parserSetter{parser: p}
 	}
 
@@ -241,11 +239,20 @@ func (mp *mapParser) String() string {
 }
 
 func (mp *mapParser) parse(v string, ptr bool) (interface{}, error) {
-	args := strings.Split(v, ",")
+	args, err := stringutil.Split(v, ',')
+
+	if err != nil {
+		return nil, errors.Wrapf(err, "%q is not a correct map value", v)
+	}
+
 	res := reflect.MakeMap(mp.t)
 
 	for _, arg := range args {
-		vs := strings.SplitN(arg, "=", 2)
+		vs, err := stringutil.Split(arg, '=')
+
+		if err != nil {
+			return nil, errors.Wrapf(err, "%q is not a correct key/value clause", v)
+		}
 
 		if len(vs) != 2 {
 			continue
@@ -282,7 +289,7 @@ func (sp *sliceParser) String() string {
 }
 
 func (sp *sliceParser) parse(v string, ptr bool) (interface{}, error) {
-	args, err := csv.NewReader(strings.NewReader(v)).Read()
+	args, err := stringutil.Split(v, ',')
 
 	if err != nil {
 		return nil, errors.Wrapf(err, "%q is not a correct slice value", v)
