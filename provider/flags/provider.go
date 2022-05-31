@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/upfluence/cfg/internal/stringutil"
 	"github.com/upfluence/cfg/provider"
 )
 
@@ -36,12 +37,12 @@ func parseFlags(args []string) map[string]string {
 		if v, ok := parseArg(arg); ok {
 			val := "true"
 
-			if strings.Contains(v, "=") {
+			switch vs, _ := stringutil.Split(v, '='); len(vs) {
+			case 2:
 				if inParam {
 					res[key] = val
 				}
 
-				vs := strings.SplitN(v, "=", 2)
 				inParam = false
 				key = vs[0]
 				val = vs[1]
@@ -49,7 +50,7 @@ func parseFlags(args []string) map[string]string {
 				if v, err := strconv.Unquote(val); err == nil {
 					val = v
 				}
-			} else {
+			case 1:
 				key = v
 				inParam = true
 
