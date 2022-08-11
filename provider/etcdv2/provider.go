@@ -2,17 +2,17 @@ package etcdv2
 
 import (
 	"context"
-	"errors"
 	"strings"
 	"sync"
 
 	etcd "github.com/coreos/etcd/client"
+	"github.com/upfluence/errors"
 
 	"github.com/upfluence/cfg/provider"
 )
 
 var (
-	errNotDirectory = errors.New("cfg/provider/etcd: Key given is not a directory")
+	errNotDirectory = errors.New("Key given is not a directory")
 
 	defaultOptions = options{
 		config: etcd.Config{

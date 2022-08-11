@@ -4,16 +4,17 @@ import (
 	"context"
 	"encoding/csv"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"reflect"
 	"strings"
 
+	"github.com/upfluence/errors"
+
 	"github.com/upfluence/cfg/provider"
 )
 
-var ErrJSONMalformated = errors.New("cfg/provider/json: Payload not formatted correctly")
+var ErrJSONMalformated = errors.New("Payload not formatted correctly")
 
 type Provider struct {
 	store map[string]interface{}

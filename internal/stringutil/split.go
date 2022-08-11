@@ -1,8 +1,9 @@
 package stringutil
 
 import (
-	"errors"
 	"unicode"
+
+	"github.com/upfluence/errors"
 )
 
 const zeroRune = rune(0)

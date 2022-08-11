@@ -2,13 +2,13 @@ package cfg
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/upfluence/errors"
 
 	"github.com/upfluence/cfg/internal/walker"
 	"github.com/upfluence/cfg/provider"
