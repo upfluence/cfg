@@ -7,7 +7,7 @@ import (
 
 	"github.com/coreos/etcd/client"
 	"github.com/stretchr/testify/assert"
-	"github.com/upfluence/pkg/testutil"
+	"github.com/upfluence/errors/errtest"
 
 	"github.com/upfluence/cfg/provider/providertest"
 )
@@ -16,16 +16,16 @@ func TestNewProvider(t *testing.T) {
 	for _, tt := range []struct {
 		name  string
 		opts  []Option
-		errfn testutil.ErrorAssertion
+		errfn errtest.ErrorAssertion
 	}{
 		{
 			name:  "no options work",
-			errfn: testutil.NoError(),
+			errfn: errtest.NoError(),
 		},
 		{
 			name:  "no endpoints",
 			opts:  []Option{SetEndpoints()},
-			errfn: testutil.ErrorEqual(client.ErrNoEndpoints),
+			errfn: errtest.ErrorEqual(client.ErrNoEndpoints),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -42,7 +42,7 @@ func TestNewProvider(t *testing.T) {
 				errfn = noErrBuilder{}
 			}
 
-			tt.errfn(t, errfn.Err())
+			tt.errfn.Assert(t, errfn.Err())
 		})
 	}
 }
@@ -96,12 +96,14 @@ func TestProvide(t *testing.T) {
 			ks:      []string{"fiz"},
 			setup:   func(*testing.T, client.KeysAPI) {},
 			cleanup: func(*testing.T, client.KeysAPI) {},
-			pfn: providertest.AssertError(func(t testing.TB, err error) {
-				etcderr, ok := err.(client.Error)
+			pfn: providertest.AssertError(
+				errtest.ErrorAssertionFunc(func(t testing.TB, err error) {
+					etcderr, ok := err.(client.Error)
 
-				assert.True(t, ok)
-				assert.Equal(t, client.ErrorCodeKeyNotFound, etcderr.Code)
-			}),
+					assert.True(t, ok)
+					assert.Equal(t, client.ErrorCodeKeyNotFound, etcderr.Code)
+				}),
+			),
 		},
 		{
 			name:    "prefix is a key",
@@ -109,7 +111,7 @@ func TestProvide(t *testing.T) {
 			ks:      []string{"fiz"},
 			setup:   setKey("/foobar", "buz"),
 			cleanup: deleteKey("/foobar", false),
-			pfn:     providertest.AssertError(testutil.ErrorEqual(errNotDirectory)),
+			pfn:     providertest.AssertError(errtest.ErrorEqual(errNotDirectory)),
 		},
 		{
 			name:    "prefix is a  flat dir",

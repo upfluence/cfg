@@ -1,14 +1,15 @@
 package walker
 
 import (
-	"errors"
 	"reflect"
 	"unicode"
+
+	"github.com/upfluence/errors"
 )
 
 var (
 	SkipStruct            = errors.New("skip struct")
-	ErrShouldBeAStructPtr = errors.New("cfg: input should be a pointer")
+	ErrShouldBeAStructPtr = errors.New("input should be a pointer")
 )
 
 type Field struct {

@@ -7,7 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
+	"github.com/upfluence/errors"
+
 	"github.com/upfluence/cfg/internal/reflectutil"
 	"github.com/upfluence/cfg/internal/stringutil"
 )

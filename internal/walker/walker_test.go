@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/upfluence/pkg/testutil"
+	"github.com/upfluence/errors/errtest"
 )
 
 type buz struct {
@@ -44,30 +44,30 @@ func TestWalk(t *testing.T) {
 		in   interface{}
 
 		outfn func(*testing.T, []string)
-		errfn testutil.ErrorAssertion
+		errfn errtest.ErrorAssertion
 	}{
 		{
 			name:  "nil",
 			outfn: func(t *testing.T, vs []string) { assert.Equal(t, 0, len(vs)) },
-			errfn: testutil.ErrorEqual(ErrShouldBeAStructPtr),
+			errfn: errtest.ErrorEqual(ErrShouldBeAStructPtr),
 		},
 		{
 			name:  "casted nil",
 			in:    castedBazNil,
 			outfn: func(t *testing.T, vs []string) { assert.Equal(t, 0, len(vs)) },
-			errfn: testutil.ErrorEqual(ErrShouldBeAStructPtr),
+			errfn: errtest.ErrorEqual(ErrShouldBeAStructPtr),
 		},
 		{
 			name:  "casted int",
 			in:    castedIntNil,
 			outfn: func(t *testing.T, vs []string) { assert.Equal(t, 0, len(vs)) },
-			errfn: testutil.ErrorEqual(ErrShouldBeAStructPtr),
+			errfn: errtest.ErrorEqual(ErrShouldBeAStructPtr),
 		},
 		{
 			name:  "baz",
 			in:    baz{},
 			outfn: func(t *testing.T, vs []string) { assert.Equal(t, 0, len(vs)) },
-			errfn: testutil.ErrorEqual(ErrShouldBeAStructPtr),
+			errfn: errtest.ErrorEqual(ErrShouldBeAStructPtr),
 		},
 		{
 			name: "baz ptr",
@@ -79,7 +79,7 @@ func TestWalk(t *testing.T) {
 					vs,
 				)
 			},
-			errfn: testutil.NoError(),
+			errfn: errtest.NoError(),
 		},
 		{
 			name: "foo ptr",
@@ -87,7 +87,7 @@ func TestWalk(t *testing.T) {
 			outfn: func(t *testing.T, vs []string) {
 				assert.Equal(t, []string{"Foo.buz"}, vs)
 			},
-			errfn: testutil.NoError(),
+			errfn: errtest.NoError(),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -100,7 +100,7 @@ func TestWalk(t *testing.T) {
 			})
 
 			tt.outfn(t, vs)
-			tt.errfn(t, err)
+			tt.errfn.Assert(t, err)
 		})
 	}
 }

@@ -4,7 +4,7 @@ import (
 	"context"
 	"os"
 
-	"github.com/pkg/errors"
+	"github.com/upfluence/errors"
 
 	"github.com/upfluence/cfg/internal/help"
 	"github.com/upfluence/cfg/internal/reflectutil"
