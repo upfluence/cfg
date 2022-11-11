@@ -1,0 +1,24 @@
+package setter
+
+import "reflect"
+
+var intTransformers = map[reflect.Kind]intTransformer{
+	reflect.Int64: func(v int64, ptr bool) interface{} {
+		if ptr {
+			x := v
+			return &x
+		}
+
+		return v
+	},
+	<% %w[Int Int8 Int16 Int32 Uint Uint8 Uint16 Uint32 Uint64].each do |kind| %>
+	reflect.<%= kind %>: func(v int64, ptr bool) interface{} {
+		if ptr {
+			x := <%= kind.downcase %>(v)
+			return &x
+		}
+
+		return <%= kind.downcase %>(v)
+	},
+  <% end %>
+}
