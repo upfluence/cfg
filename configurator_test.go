@@ -130,7 +130,7 @@ type basicStruct1 struct {
 }
 
 type basicStruct2 struct {
-	Foo int64
+	Foo int32
 }
 
 type basicStruct3 struct {

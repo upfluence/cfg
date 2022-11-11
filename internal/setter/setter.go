@@ -112,14 +112,14 @@ func (df *defaultFactory) buildBasicParser(t reflect.Type) (parser, bool) {
 		}
 	}
 
-	switch k {
-	case reflect.String:
+	switch {
+	case k == reflect.String:
 		return stringParser, ptr
-	case reflect.Int, reflect.Int64:
+	case k >= reflect.Int && k <= reflect.Uint64:
 		return &intParser{transformer: intTransformers[k]}, ptr
-	case reflect.Float64:
-		return floatParser{}, ptr
-	case reflect.Bool:
+	case k == reflect.Float32 || k == reflect.Float64:
+		return floatParser(k), ptr
+	case k == reflect.Bool:
 		return boolParser, ptr
 	}
 
@@ -351,30 +351,11 @@ func (sp *sliceParser) parse(v string, ptr bool) (interface{}, error) {
 
 type intTransformer func(int64, bool) interface{}
 
-var intTransformers = map[reflect.Kind]intTransformer{
-	reflect.Int: func(v int64, ptr bool) interface{} {
-		if ptr {
-			x := int(v)
-			return &x
-		}
+type floatParser reflect.Kind
 
-		return int(v)
-	},
-	reflect.Int64: func(v int64, ptr bool) interface{} {
-		if ptr {
-			x := v
-			return &x
-		}
+func (fp floatParser) String() string { return "float" }
 
-		return v
-	},
-}
-
-type floatParser struct{}
-
-func (floatParser) String() string { return "float" }
-
-func (floatParser) parse(value string, ptr bool) (interface{}, error) {
+func (fp floatParser) parse(value string, ptr bool) (interface{}, error) {
 	var v, err = strconv.ParseFloat(value, 64)
 
 	if err != nil {
@@ -382,7 +363,16 @@ func (floatParser) parse(value string, ptr bool) (interface{}, error) {
 	}
 
 	if ptr {
+		if reflect.Kind(fp) == reflect.Float32 {
+			vv := float32(v)
+			return &vv, nil
+		}
+
 		return &v, nil
+	}
+
+	if reflect.Kind(fp) == reflect.Float32 {
+		return float32(fp), nil
 	}
 
 	return v, nil

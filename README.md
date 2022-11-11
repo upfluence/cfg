@@ -101,7 +101,7 @@ kinds of improvment.
 
 The current implementation parses:
 * `string`
-* `int`, `int64`
+* all int and float types
 * `bool`
 * `time.Duration` using `time.ParseDuration`
 * `time.Time` based on the format `2006-01-02T15:04:05`
@@ -112,8 +112,6 @@ The current implementation parses:
    * `json.Unmarshaler`
    * `encoding.TextUnmarshaler`
    * `interface { Parse(string) error }`
-
-We will implement more types in the future (including floats, other int types etc...)
 
 ### Other provider
 
