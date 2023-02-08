@@ -42,6 +42,7 @@ type testCase struct {
 	caseName string
 	input    interface{}
 	provider provider.Provider
+	options  []Option
 
 	dataAssertion func(*testing.T, interface{})
 	errAssertion  func(*testing.T, error)
@@ -223,6 +224,14 @@ func TestConfigurator(t *testing.T) {
 			caseName:      "basic-no-ptr-filled",
 			provider:      &mockProvider{st: map[string]string{"Fiz": "Bar"}},
 			dataAssertion: deepEqual(&embedStruct1{BasicStruct1: BasicStruct1{"Bar"}}),
+			errAssertion:  noError,
+		},
+		testCase{
+			input:         &embedStruct1{},
+			caseName:      "basic-no-ptr-filled-ignore-missing--tag",
+			options:       []Option{IgnoreMissingTag},
+			provider:      &mockProvider{st: map[string]string{"Fiz": "Bar"}},
+			dataAssertion: deepEqual(&embedStruct1{}),
 			errAssertion:  noError,
 		},
 		testCase{
@@ -494,7 +503,9 @@ func TestConfigurator(t *testing.T) {
 		t.Run(
 			tCase.caseName,
 			func(t *testing.T) {
-				c := NewConfigurator(tCase.provider)
+				c := NewConfiguratorWithOptions(
+					append(tCase.options, WithProviders(tCase.provider))...,
+				)
 				v := tCase.input
 
 				tCase.errAssertion(t, c.Populate(context.Background(), v))

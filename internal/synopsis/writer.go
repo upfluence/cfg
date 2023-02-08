@@ -16,8 +16,9 @@ var DefaultWriter = &Writer{
 }
 
 type Writer struct {
-	Factory  setter.Factory
-	Provider provider.KeyFormatterProvider
+	Factory          setter.Factory
+	Provider         provider.KeyFormatterProvider
+	IgnoreMissingTag bool
 }
 
 func (w *Writer) Write(out io.Writer, in interface{}) (int, error) {
@@ -30,7 +31,7 @@ func (w *Writer) Write(out io.Writer, in interface{}) (int, error) {
 				return nil
 			}
 
-			fks := walker.BuildFieldKeys(w.Provider.StructTag(), f)
+			fks := walker.BuildFieldKeys(w.Provider.StructTag(), f, w.IgnoreMissingTag)
 
 			if len(fks) == 0 {
 				return nil

@@ -25,16 +25,17 @@ func walkFields(f *Field, fn func(reflect.StructField) bool) bool {
 	return true
 }
 
-func buildStructFieldKey(t string, sf reflect.StructField) ([]string, bool) {
+func buildStructFieldKey(t string, sf reflect.StructField, ignoreMissingTag bool) ([]string, bool) {
 	if t != "" {
-		if v, ok := sf.Tag.Lookup(t); ok {
-			switch v {
-			case "":
-			case "-":
+		switch v, _ := sf.Tag.Lookup(t); v {
+		case "":
+			if ignoreMissingTag {
 				return nil, false
-			default:
-				return strings.Split(v, ","), true
 			}
+		case "-":
+			return nil, false
+		default:
+			return strings.Split(v, ","), true
 		}
 	}
 
@@ -45,11 +46,11 @@ func buildStructFieldKey(t string, sf reflect.StructField) ([]string, bool) {
 	return []string{sf.Name}, true
 }
 
-func BuildFieldKeys(t string, f *Field) []string {
+func BuildFieldKeys(t string, f *Field, ignoreMissingTag bool) []string {
 	var fss [][]string
 
 	if ok := walkFields(f, func(sf reflect.StructField) bool {
-		fs, ok := buildStructFieldKey(t, sf)
+		fs, ok := buildStructFieldKey(t, sf, ignoreMissingTag)
 
 		if !ok {
 			return false

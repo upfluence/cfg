@@ -19,14 +19,27 @@ type Configurator interface {
 	Populate(context.Context, interface{}) error
 }
 
+type Option func(*configurator)
+
+func IgnoreMissingTag(c *configurator) { c.ignoreMissingTag = true }
+
+func WithProviders(ps ...provider.Provider) Option {
+	return func(c *configurator) { c.providers = append(c.providers, ps...) }
+}
+
 type configurator struct {
-	providers []provider.Provider
-	factory   setter.Factory
+	providers        []provider.Provider
+	factory          setter.Factory
+	ignoreMissingTag bool
 }
 
 func NewDefaultConfigurator(providers ...provider.Provider) Configurator {
 	cfg := newConfigurator(
-		append(providers, env.NewDefaultProvider(), flags.NewDefaultProvider())...,
+		[]Option{
+			WithProviders(
+				append(providers, env.NewDefaultProvider(), flags.NewDefaultProvider())...,
+			),
+		},
 	)
 
 	return &helpConfigurator{
@@ -37,14 +50,21 @@ func NewDefaultConfigurator(providers ...provider.Provider) Configurator {
 }
 
 func NewConfigurator(providers ...provider.Provider) Configurator {
-	return newConfigurator(providers...)
+	return NewConfiguratorWithOptions(WithProviders(providers...))
 }
 
-func newConfigurator(providers ...provider.Provider) *configurator {
-	return &configurator{
-		providers: providers,
-		factory:   setter.DefaultFactory,
+func NewConfiguratorWithOptions(opts ...Option) Configurator {
+	return newConfigurator(opts)
+}
+
+func newConfigurator(opts []Option) *configurator {
+	var c = configurator{factory: setter.DefaultFactory}
+
+	for _, opt := range opts {
+		opt(&c)
 	}
+
+	return &c
 }
 
 func (c *configurator) Populate(ctx context.Context, in interface{}) error {
@@ -68,7 +88,7 @@ func (c *configurator) walkFunc(ctx context.Context, f *walker.Field) error {
 			err error
 		)
 
-		for _, k := range walker.BuildFieldKeys(p.StructTag(), f) {
+		for _, k = range walker.BuildFieldKeys(p.StructTag(), f, c.ignoreMissingTag) {
 			v, ok, err = p.Provide(ctx, k)
 
 			if err != nil {

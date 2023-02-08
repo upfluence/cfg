@@ -27,8 +27,9 @@ var (
 )
 
 type Writer struct {
-	Providers []provider.Provider
-	Factory   setter.Factory
+	Providers        []provider.Provider
+	Factory          setter.Factory
+	IgnoreMissingTag bool
 }
 
 func (w *Writer) writeConfig(out io.Writer, in interface{}) (int, error) {
@@ -43,7 +44,7 @@ func (w *Writer) writeConfig(out io.Writer, in interface{}) (int, error) {
 				return nil
 			}
 
-			fks := walker.BuildFieldKeys("", f)
+			fks := walker.BuildFieldKeys("", f, w.IgnoreMissingTag)
 
 			if len(fks) == 0 {
 				return nil
@@ -88,7 +89,11 @@ func (w *Writer) writeConfig(out io.Writer, in interface{}) (int, error) {
 				if kf, ok := p.(provider.KeyFormatterProvider); ok {
 					var ks []string
 
-					for _, k := range walker.BuildFieldKeys(p.StructTag(), f) {
+					for _, k := range walker.BuildFieldKeys(
+						p.StructTag(),
+						f,
+						w.IgnoreMissingTag,
+					) {
 						ks = append(ks, kf.FormatKey(k))
 					}
 
