@@ -85,6 +85,7 @@ func (c *configurator) walkFunc(ctx context.Context, f *walker.Field) error {
 		var (
 			v   string
 			ok  bool
+			k   string
 			err error
 		)
 
@@ -92,11 +93,13 @@ func (c *configurator) walkFunc(ctx context.Context, f *walker.Field) error {
 			v, ok, err = p.Provide(ctx, k)
 
 			if err != nil {
-				return errors.Wrapf(
-					err,
-					"Populate {struct: %T field: %s}",
-					v,
-					f.Field.Name,
+				return errors.WithStack(
+					&ProvidingError{
+						Err:      err,
+						Key:      k,
+						Field:    f.Field,
+						Provider: p,
+					},
 				)
 			}
 
@@ -113,7 +116,15 @@ func (c *configurator) walkFunc(ctx context.Context, f *walker.Field) error {
 			v,
 			reflectutil.IndirectedValue(f.Value).FieldByName(f.Field.Name),
 		); err != nil {
-			return err
+			return errors.WithStack(
+				&SettingError{
+					Err:      err,
+					Key:      k,
+					Value:    v,
+					Field:    f.Field,
+					Provider: p,
+				},
+			)
 		}
 	}
 
