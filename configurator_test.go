@@ -2,7 +2,9 @@ package cfg
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net"
 	"os"
 	"testing"
 	"time"
@@ -179,6 +181,11 @@ type mapStringStringsStruct struct {
 
 type skipStruct struct {
 	Foo string `mock:"-"`
+}
+
+type marshalerStruct struct {
+	Raw json.RawMessage
+	IP  net.IP
 }
 
 func boolTestCase(in string, out bool) testCase {
@@ -479,6 +486,23 @@ func TestConfigurator(t *testing.T) {
 			dataAssertion: func(t *testing.T, y interface{}) {
 				if v := y.(*skipStruct).Foo; v != "" {
 					t.Errorf("Wrong result set: %v [ instead of: \"\"]", v)
+				}
+			},
+			errAssertion: noError,
+		},
+
+		testCase{
+			input:    &marshalerStruct{},
+			caseName: "use the unmarshaller implementation",
+			provider: &mockProvider{st: map[string]string{"Raw": "123.45", "IP": "127.1.2.3"}},
+			dataAssertion: func(t *testing.T, y interface{}) {
+				t.Log(y.(*marshalerStruct))
+				if v := string(y.(*marshalerStruct).Raw); v != `"123.45"` {
+					t.Errorf("Wrong result set: %v [ instead of: \"123.45\"]", v)
+				}
+
+				if v := y.(*marshalerStruct).IP.String(); v != "127.1.2.3" {
+					t.Errorf("Wrong result set: %v [ instead of: \"127.1.2.3\"]", v)
 				}
 			},
 			errAssertion: noError,

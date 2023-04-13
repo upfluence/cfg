@@ -37,7 +37,7 @@ func (w *Writer) Write(out io.Writer, in interface{}) (int, error) {
 				return nil
 			}
 
-			if f.Value.Type().Implements(setter.ValueType) {
+			if setter.IsUnmarshaler(f.Value.Type()) {
 				return walker.SkipStruct
 			}
 

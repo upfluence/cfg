@@ -1,6 +1,8 @@
 package setter
 
 import (
+	"encoding"
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -14,21 +16,43 @@ import (
 )
 
 var (
-	durationType = reflect.TypeOf(time.Duration(0))
-	timeType     = reflect.TypeOf(time.Time{})
-	ValueType    = reflect.TypeOf((*Value)(nil)).Elem()
+	durationType        = reflect.TypeOf(time.Duration(0))
+	timeType            = reflect.TypeOf(time.Time{})
+	valueType           = reflect.TypeOf((*Value)(nil)).Elem()
+	textUnmarshalerType = reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem()
+	jsonUnmarshalerType = reflect.TypeOf((*json.Unmarshaler)(nil)).Elem()
+
+	durationParser = &staticParser{t: "duration", fn: parseDuration}
+	boolParser     = &staticParser{t: "bool", fn: parseBool}
+	stringParser   = &staticParser{t: "string", fn: parseString}
 
 	presetParsers = map[reflect.Type]func(factoryOptions) parser{
-		durationType: func(factoryOptions) parser { return durationParser{} },
+		durationType: func(factoryOptions) parser { return durationParser },
 		timeType: func(fo factoryOptions) parser {
 			return timeParser{opts: fo.tpo}
 		},
 	}
 
+	interfaceParsers = map[reflect.Type]func(interface{}, string) error{
+		valueType:           assignValue,
+		textUnmarshalerType: assignTextUnmarshaler,
+		jsonUnmarshalerType: assignJSONUnmarshaler,
+	}
+
 	defaultFactoryOptions = factoryOptions{tpo: defaultTimeParserOption}
 
-	DefaultFactory Factory = NewDefaultFactory()
+	DefaultFactory = NewDefaultFactory()
 )
+
+func IsUnmarshaler(t reflect.Type) bool {
+	for it := range interfaceParsers {
+		if t.Implements(it) {
+			return true
+		}
+	}
+
+	return false
+}
 
 type factoryOptions struct {
 	tpo timeParserOption
@@ -78,23 +102,25 @@ func (df *defaultFactory) buildBasicParser(t reflect.Type) (parser, bool) {
 		pt = reflect.PtrTo(t)
 	}
 
-	if pt.Implements(ValueType) {
-		return &valueParser{t: t}, ptr
-	}
-
 	if p, ok := presetParsers[t]; ok {
 		return p(df.opts), ptr
 	}
 
+	for it, fn := range interfaceParsers {
+		if pt.Implements(it) {
+			return &interfaceParser{t: t, fn: fn}, ptr
+		}
+	}
+
 	switch k {
 	case reflect.String:
-		return stringParser{}, ptr
+		return stringParser, ptr
 	case reflect.Int, reflect.Int64:
 		return &intParser{transformer: intTransformers[k]}, ptr
 	case reflect.Float64:
 		return floatParser{}, ptr
 	case reflect.Bool:
-		return boolParser{}, ptr
+		return boolParser, ptr
 	}
 
 	return nil, false
@@ -105,13 +131,16 @@ func (df *defaultFactory) buildParser(t reflect.Type) (parser, bool) {
 
 	switch k {
 	case reflect.Slice:
-		p, ptr := df.buildBasicParser(t.Elem())
+		// Make sure it is not a []byte
+		if t.Elem().Kind() != reflect.Uint8 {
+			p, ptr := df.buildBasicParser(t.Elem())
 
-		if p == nil {
-			return nil, false
+			if p == nil {
+				return nil, false
+			}
+
+			return &sliceParser{p: p, t: t, ptr: ptr}, false
 		}
-
-		return &sliceParser{p: p, t: t, ptr: ptr}, false
 	case reflect.Map:
 		vp, vptr := df.buildParser(t.Elem())
 
@@ -145,42 +174,12 @@ type Setter interface {
 	Set(string, reflect.Value) error
 }
 
-type ErrSetterNotImplemented struct {
+type NotImplementedError struct {
 	field reflect.StructField
 }
 
-func (e *ErrSetterNotImplemented) Error() string {
+func (e *NotImplementedError) Error() string {
 	return fmt.Sprintf("cfg: Setter not implemented for type %v", e.field.Type)
-}
-
-type boolParser struct{}
-
-type ErrNotBoolValue struct {
-	value string
-}
-
-func (e *ErrNotBoolValue) Error() string {
-	return fmt.Sprintf("cfg: Can't parse %q in a bool value", e.value)
-}
-
-func (boolParser) String() string { return "bool" }
-
-func (boolParser) parse(value string, ptr bool) (interface{}, error) {
-	var v bool
-
-	switch strings.TrimSpace(value) {
-	case "t", "1", "true", "yes", "y":
-		v = true
-	case "f", "0", "false", "no", "n":
-	default:
-		return nil, &ErrNotBoolValue{value: value}
-	}
-
-	if ptr {
-		return &v, nil
-	}
-
-	return v, nil
 }
 
 type parserSetter struct {
@@ -207,16 +206,18 @@ type parser interface {
 	parse(string, bool) (interface{}, error)
 }
 
-type valueParser struct {
+type interfaceParser struct {
 	t reflect.Type
+
+	fn func(interface{}, string) error
 }
 
-func (vp *valueParser) String() string { return vp.t.String() }
+func (ip *interfaceParser) String() string { return ip.t.String() }
 
-func (vp *valueParser) parse(v string, ptr bool) (interface{}, error) {
-	rv := reflect.New(vp.t)
+func (ip *interfaceParser) parse(v string, ptr bool) (interface{}, error) {
+	rv := reflect.New(ip.t)
 
-	if err := rv.Interface().(Value).Parse(v); err != nil {
+	if err := ip.fn(rv.Interface(), v); err != nil {
 		return nil, err
 	}
 
@@ -225,6 +226,44 @@ func (vp *valueParser) parse(v string, ptr bool) (interface{}, error) {
 	}
 
 	return rv.Elem().Interface(), nil
+}
+
+func assignValue(v interface{}, txt string) error {
+	return v.(Value).Parse(txt)
+}
+
+func assignTextUnmarshaler(v interface{}, txt string) error {
+	return v.(encoding.TextUnmarshaler).UnmarshalText([]byte(txt))
+}
+
+func shouldQuote(txt string) bool {
+	if len(txt) < 2 {
+		return true
+	}
+
+	if txt[0] == '[' && txt[len(txt)-1] == ']' {
+		return false
+	}
+
+	if txt[0] == '{' && txt[len(txt)-1] == '}' {
+		return false
+	}
+
+	return true
+}
+
+func assignJSONUnmarshaler(v interface{}, txt string) error {
+	if shouldQuote(txt) {
+		unquoted, err := strconv.Unquote(txt)
+
+		if err != nil {
+			unquoted = txt
+		}
+
+		txt = strconv.Quote(unquoted)
+	}
+
+	return v.(json.Unmarshaler).UnmarshalJSON([]byte(txt))
 }
 
 type mapParser struct {
@@ -275,7 +314,6 @@ func (mp *mapParser) parse(v string, ptr bool) (interface{}, error) {
 	}
 
 	return res.Interface(), nil
-
 }
 
 type sliceParser struct {
@@ -309,19 +347,6 @@ func (sp *sliceParser) parse(v string, ptr bool) (interface{}, error) {
 	}
 
 	return res.Interface(), nil
-}
-
-type stringParser struct{}
-
-func (stringParser) String() string { return "string" }
-
-func (stringParser) parse(v string, ptr bool) (interface{}, error) {
-	if ptr {
-		x := v
-		return &x, nil
-	}
-
-	return v, nil
 }
 
 type intTransformer func(int64, bool) interface{}
@@ -405,11 +430,18 @@ func (tp timeParser) parse(value string, ptr bool) (interface{}, error) {
 	return t, nil
 }
 
-type durationParser struct{}
+type staticParser struct {
+	t string
 
-func (durationParser) String() string { return "duration" }
+	fn func(string, bool) (interface{}, error)
+}
 
-func (s durationParser) parse(value string, ptr bool) (interface{}, error) {
+func (sp *staticParser) String() string { return sp.t }
+func (sp *staticParser) parse(value string, ptr bool) (interface{}, error) {
+	return sp.fn(value, ptr)
+}
+
+func parseDuration(value string, ptr bool) (interface{}, error) {
 	d, err := time.ParseDuration(value)
 
 	if err != nil {
@@ -421,4 +453,39 @@ func (s durationParser) parse(value string, ptr bool) (interface{}, error) {
 	}
 
 	return d, nil
+}
+
+type NotBoolValueError struct {
+	value string
+}
+
+func (e *NotBoolValueError) Error() string {
+	return fmt.Sprintf("cfg: Can't parse %q in a bool value", e.value)
+}
+
+func parseBool(value string, ptr bool) (interface{}, error) {
+	var v bool
+
+	switch strings.TrimSpace(value) {
+	case "t", "1", "true", "yes", "y":
+		v = true
+	case "f", "0", "false", "no", "n":
+	default:
+		return nil, &NotBoolValueError{value: value}
+	}
+
+	if ptr {
+		return &v, nil
+	}
+
+	return v, nil
+}
+
+func parseString(v string, ptr bool) (interface{}, error) {
+	if ptr {
+		x := v
+		return &x, nil
+	}
+
+	return v, nil
 }

@@ -108,6 +108,10 @@ The current implementation parses:
 * sub structs
 * slices
 * maps
+* All the value or pointer to a value that implements:
+   * `json.Unmarshaler`
+   * `encoding.TextUnmarshaler`
+   * `interface { Parse(string) error }`
 
 We will implement more types in the future (including floats, other int types etc...)
 
