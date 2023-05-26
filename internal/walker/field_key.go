@@ -27,8 +27,12 @@ func walkFields(f *Field, fn func(reflect.StructField) bool) bool {
 
 func buildStructFieldKey(t string, sf reflect.StructField, ignoreMissingTag bool) ([]string, bool) {
 	if t != "" {
-		switch v, _ := sf.Tag.Lookup(t); v {
+		switch v, ok := sf.Tag.Lookup(t); v {
 		case "":
+			if ok {
+				return []string{}, true
+			}
+
 			if ignoreMissingTag {
 				return nil, false
 			}
