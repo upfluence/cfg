@@ -51,6 +51,10 @@ func IsUnmarshaler(t reflect.Type) bool {
 		}
 	}
 
+	if t.Kind() != reflect.Ptr {
+		return IsUnmarshaler(reflect.PtrTo(t))
+	}
+
 	return false
 }
 
