@@ -19,6 +19,13 @@ type helpConfigurator struct {
 	stderr io.Writer
 }
 
+func (hc *helpConfigurator) WithOptions(opts ...Option) Configurator {
+	dup := *hc
+	dup.configurator = hc.configurator.withOptions(opts)
+
+	return &dup
+}
+
 func (hc *helpConfigurator) Populate(ctx context.Context, in interface{}) error {
 	var cfg helpConfig
 
@@ -28,6 +35,7 @@ func (hc *helpConfigurator) Populate(ctx context.Context, in interface{}) error 
 
 	if cfg.Help {
 		_ = hc.PrintDefaults(in)
+
 		os.Exit(2)
 	}
 
