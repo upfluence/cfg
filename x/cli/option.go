@@ -3,9 +3,12 @@ package cli
 import (
 	"os"
 
+	"github.com/upfluence/cfg"
 	"github.com/upfluence/cfg/provider"
 	"github.com/upfluence/cfg/provider/env"
 )
+
+type NewConfiguratorFunc func(...cfg.Option) cfg.Configurator
 
 type Option func(*options)
 
@@ -17,14 +20,24 @@ func WithCommand(cmd Command) Option {
 	return func(o *options) { o.cmd = cmd }
 }
 
+func WithConfiguratorOptions(opts ...cfg.Option) Option {
+	return func(o *options) { o.opts = append(o.opts, opts...) }
+}
+
+func WithNewConfiguratorFunc(fn NewConfiguratorFunc) Option {
+	return func(o *options) { o.newFunc = fn }
+}
+
 type options struct {
 	name string
 	args []string
 
 	version string
 
-	cmd Command
-	ps  []provider.Provider
+	cmd     Command
+	ps      []provider.Provider
+	opts    []cfg.Option
+	newFunc NewConfiguratorFunc
 }
 
 func defaultOptions() *options {
@@ -33,6 +46,7 @@ func defaultOptions() *options {
 		args:    os.Args[1:],
 		version: Version,
 		ps:      []provider.Provider{env.NewDefaultProvider()},
+		newFunc: cfg.NewConfiguratorWithOptions,
 	}
 }
 

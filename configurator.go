@@ -17,6 +17,8 @@ import (
 
 type Configurator interface {
 	Populate(context.Context, interface{}) error
+
+	WithOptions(...Option) Configurator
 }
 
 type Option func(*configurator)
@@ -25,6 +27,12 @@ func IgnoreMissingTag(c *configurator) { c.ignoreMissingTag = true }
 
 func WithProviders(ps ...provider.Provider) Option {
 	return func(c *configurator) { c.providers = append(c.providers, ps...) }
+}
+
+var AppendProviders = WithProviders
+
+func OverrideProviders(ps ...provider.Provider) Option {
+	return func(c *configurator) { c.providers = ps }
 }
 
 type configurator struct {
@@ -65,6 +73,22 @@ func newConfigurator(opts []Option) *configurator {
 	}
 
 	return &c
+}
+
+func (c *configurator) withOptions(opts []Option) *configurator {
+	dup := *c
+
+	dup.providers = append([]provider.Provider(nil), c.providers...)
+
+	for _, opt := range opts {
+		opt(&dup)
+	}
+
+	return &dup
+}
+
+func (c *configurator) WithOptions(opts ...Option) Configurator {
+	return c.withOptions(opts)
 }
 
 func (c *configurator) Populate(ctx context.Context, in interface{}) error {

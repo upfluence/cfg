@@ -13,7 +13,9 @@ import (
 )
 
 type App struct {
-	ps []provider.Provider
+	ps      []provider.Provider
+	opts    []cfg.Option
+	newFunc NewConfiguratorFunc
 
 	name string
 	args []string
@@ -28,10 +30,12 @@ func NewApp(opts ...Option) *App {
 	}
 
 	return &App{
-		ps:   o.ps,
-		name: o.name,
-		args: o.args,
-		cmd:  o.command(),
+		ps:      o.ps,
+		name:    o.name,
+		args:    o.args,
+		opts:    o.opts,
+		newFunc: o.newFunc,
+		cmd:     o.command(),
 	}
 }
 
@@ -56,13 +60,17 @@ func (a *App) parseArgs() ([]string, []string) {
 
 		if arg == "--" {
 			isFlag = false
+
 			cmds = append(cmds, arg)
+
 			nested = true
+
 			continue
 		}
 
 		if arg[0] == '-' {
 			isFlag = true
+
 			flags = append(flags, arg)
 
 			if strings.Contains(arg, "=") {
@@ -74,7 +82,9 @@ func (a *App) parseArgs() ([]string, []string) {
 
 		if isFlag {
 			isFlag = false
+
 			flags = append(flags, arg)
+
 			continue
 		}
 
@@ -94,7 +104,12 @@ func (a *App) commandContext() CommandContext {
 		)
 	)
 
-	return newCommandContext(a.name, cmds, args, cfg.NewConfigurator(ps...))
+	return newCommandContext(
+		a.name,
+		cmds,
+		args,
+		a.newFunc(append(a.opts, cfg.WithProviders(ps...))...),
+	)
 }
 
 func (a *App) Run(ctx context.Context) {

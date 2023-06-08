@@ -16,14 +16,24 @@ import (
 
 var ErrJSONMalformated = errors.New("Payload not formatted correctly")
 
+type DecodeFunc func(io.Reader, interface{}) error
+
+func jsonDecode(r io.Reader, v interface{}) error {
+	return json.NewDecoder(r).Decode(v)
+}
+
 type Provider struct {
 	store map[string]interface{}
 }
 
 func NewProviderFromReader(r io.Reader) provider.Provider {
+	return NewProviderFromReaderAndDecoder(r, jsonDecode)
+}
+
+func NewProviderFromReaderAndDecoder(r io.Reader, fn DecodeFunc) provider.Provider {
 	var v = make(map[string]interface{})
 
-	if err := json.NewDecoder(r).Decode(&v); err != nil {
+	if err := fn(r, &v); err != nil {
 		return provider.ProvideError("json", err)
 	}
 
