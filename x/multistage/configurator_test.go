@@ -1,4 +1,4 @@
-package cfg
+package multistage
 
 import (
 	"context"
@@ -32,10 +32,10 @@ func TestIntegration(t *testing.T) {
 		{
 			stages: []Stage{
 				ConfigurationStage[config]{
-					NextProvidersFunc: func(c config) []provider.Provider {
+					NextProvidersFunc: func(c config) ([]provider.Provider, error) {
 						return []provider.Provider{
 							jsonProvider(`{"bar":"buz"}`),
-						}
+						}, nil
 					},
 				},
 			},
@@ -45,8 +45,10 @@ func TestIntegration(t *testing.T) {
 			stages: []Stage{
 				ConfigurationStage[config]{
 					Mode: ProviderReplace,
-					NextProvidersFunc: func(c config) []provider.Provider {
-						return []provider.Provider{jsonProvider(`{"bar":"buz"}`)}
+					NextProvidersFunc: func(c config) ([]provider.Provider, error) {
+						return []provider.Provider{
+							jsonProvider(`{"bar":"buz"}`),
+						}, nil
 					},
 				},
 			},

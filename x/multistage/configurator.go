@@ -1,4 +1,4 @@
-package cfg
+package multistage
 
 import (
 	"context"
@@ -18,7 +18,7 @@ const (
 type ConfigurationStage[T any] struct {
 	InitialConfig     T
 	Mode              ProviderMode
-	NextProvidersFunc func(T) []provider.Provider
+	NextProvidersFunc func(T) ([]provider.Provider, error)
 }
 
 func (cs ConfigurationStage[T]) Next(ctx context.Context, c cfg.Configurator) ([]provider.Provider, ProviderMode, error) {
@@ -28,7 +28,13 @@ func (cs ConfigurationStage[T]) Next(ctx context.Context, c cfg.Configurator) ([
 		return nil, ProviderAppend, err
 	}
 
-	return cs.NextProvidersFunc(v), cs.Mode, nil
+	ps, err := cs.NextProvidersFunc(v)
+
+	if err != nil {
+		return nil, ProviderAppend, err
+	}
+
+	return ps, cs.Mode, nil
 }
 
 type Stage interface {
