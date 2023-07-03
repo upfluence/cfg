@@ -14,7 +14,7 @@ func WithShortHelp[T any](h string) DefaultStaticCommandOption[T] {
 
 func WithLongHelp[T any](h string) DefaultStaticCommandOption[T] {
 	return func(opts *defaultStaticCommandOptions[T]) {
-		opts.shortHelp = h
+		opts.longHelp = h
 	}
 }
 
