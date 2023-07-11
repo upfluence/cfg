@@ -113,7 +113,23 @@ func (a *App) commandContext() CommandContext {
 }
 
 func (a *App) Run(ctx context.Context) {
-	var code int
+	var msg, code = a.Execute(ctx)
+
+	if msg != "" {
+		_, _ = io.WriteString(os.Stderr, msg+"\n")
+	}
+
+	os.Stdout.Sync()
+	os.Stderr.Sync()
+
+	os.Exit(code)
+}
+
+func (a *App) Execute(ctx context.Context) (string, int) {
+	var (
+		msg  string
+		code int
+	)
 
 	if err := a.cmd.Run(ctx, a.commandContext()); err != nil {
 		code = 1
@@ -125,11 +141,8 @@ func (a *App) Run(ctx context.Context) {
 			code = serr.StatusCode()
 		}
 
-		_, _ = io.WriteString(os.Stderr, err.Error()+"\n")
+		msg = err.Error()
 	}
 
-	os.Stdout.Sync()
-	os.Stderr.Sync()
-
-	os.Exit(code)
+	return msg, code
 }
