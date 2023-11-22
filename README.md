@@ -4,30 +4,6 @@ Convenient configuration builder. Inject data straight to your
 configuration struct from various input source (env, flags, files, you
 name it!)
 
-## Provider
-
-Implemented providers:
-
-### Environment
-
-TODO
-
-### Flags
-
-TODO
-
-### JSON input
-
-TODO
-
-### Static
-
-TODO
-
-### Create your own
-
-TODO
-
 ## Example
 
 The simplest way to use upfluence/cfg is:
@@ -64,7 +40,7 @@ func main() {
 }
 ```
 
-By default only the `env` and `flags` provider are used.
+By default only the `env` and `flags` providers are used.
 
 You can now provide configuration to your application through:
 
@@ -88,6 +64,30 @@ Arg1: foo, Arg2: bar
 $ ./example --arg1 --no-arg2
 Arg1: TRUE, Arg2: FALSE
 ```
+
+## Provider
+
+Implemented providers:
+
+### Environment
+
+TODO
+
+### Flags
+
+TODO
+
+### JSON input
+
+TODO
+
+### Static
+
+TODO
+
+### Create your own
+
+TODO
 
 ## Roadmap
 
