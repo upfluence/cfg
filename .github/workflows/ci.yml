@@ -19,9 +19,9 @@ jobs:
         with:
           go-version: ${{ matrix.go }}
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Cache Modules
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: ~/go/pkg/mod
           key: ${{ runner.os }}-go-v1-${{ hashFiles('**/go.sum') }}
@@ -29,3 +29,9 @@ jobs:
             ${{ runner.os }}-go-
       - name: Run tests
         run: go test -v ./...
+
+  release:
+    needs: test
+    if: github.ref == 'refs/heads/master'
+    uses: upfluence/actions/.github/workflows/lib-any-release.yml@master
+    secrets: inherit
