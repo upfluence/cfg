@@ -42,6 +42,13 @@ func TestProvider_Provide(t *testing.T) {
 			res:       "BAR",
 			exist:     true,
 		},
+		{
+			name:      "empty string is present",
+			in:        "foo",
+			envValues: map[string]string{"FOO": ""},
+			res:       "",
+			exist:     true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

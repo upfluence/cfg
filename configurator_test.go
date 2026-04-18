@@ -111,6 +111,14 @@ type floatStruct struct {
 	F float64 `mock:"f"`
 }
 
+type float32Struct struct {
+	F float32 `mock:"f"`
+}
+
+type uint64Struct struct {
+	V uint64 `mock:"v"`
+}
+
 type mutiValuesStruct struct {
 	Foo string `mock:"foo,bar,buz"`
 }
@@ -399,6 +407,17 @@ func TestConfigurator(t *testing.T) {
 			errAssertion: noError,
 		},
 		testCase{
+			caseName: "map-value-with-equals",
+			input:    &mapStringStringStruct{},
+			provider: &mockProvider{
+				st: map[string]string{"map": "key=a=b=c"},
+			},
+			dataAssertion: deepEqual(&mapStringStringStruct{
+				Map: map[string]string{"key": "a=b=c"},
+			}),
+			errAssertion: noError,
+		},
+		testCase{
 			caseName: "duration",
 			input:    &durationStruct{},
 			provider: &mockProvider{st: map[string]string{"d": "5m"}},
@@ -446,6 +465,20 @@ func TestConfigurator(t *testing.T) {
 			dataAssertion: deepEqual(&floatStruct{F: .5}),
 			errAssertion:  noError,
 		},
+		testCase{
+			input:         &float32Struct{},
+			caseName:      "basic-float32",
+			provider:      &mockProvider{st: map[string]string{"f": "3.14"}},
+			dataAssertion: deepEqual(&float32Struct{F: 3.14}),
+			errAssertion:  noError,
+		},
+		testCase{
+			input:         &uint64Struct{},
+			caseName:      "large-uint64",
+			provider:      &mockProvider{st: map[string]string{"v": "18446744073709551615"}},
+			dataAssertion: deepEqual(&uint64Struct{V: 18446744073709551615}),
+			errAssertion:  noError,
+		},
 		boolTestCase("t", true),
 		boolTestCase("true", true),
 		boolTestCase("1", true),
@@ -480,6 +513,13 @@ func TestConfigurator(t *testing.T) {
 				}
 			},
 			errAssertion: noError,
+		},
+		testCase{
+			input:         &nestedPtrStruct{},
+			caseName:      "nested_ptr_struct_no_values",
+			provider:      &mockProvider{st: map[string]string{}},
+			dataAssertion: deepEqual(&nestedPtrStruct{Nested: nil}),
+			errAssertion:  noError,
 		},
 
 		testCase{

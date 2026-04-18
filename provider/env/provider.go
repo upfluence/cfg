@@ -33,9 +33,7 @@ func (p *Provider) FormatKey(n string) string {
 }
 
 func (p *Provider) Provide(_ context.Context, v string) (string, bool, error) {
-	var (
-		envVar = p.FormatKey(v)
-		res    = os.Getenv(envVar)
-	)
-	return res, res != "", nil
+	res, ok := os.LookupEnv(p.FormatKey(v))
+
+	return res, ok, nil
 }

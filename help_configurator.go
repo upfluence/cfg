@@ -22,6 +22,10 @@ type helpConfigurator struct {
 func (hc *helpConfigurator) WithOptions(opts ...Option) Configurator {
 	dup := *hc
 	dup.configurator = hc.configurator.withOptions(opts)
+	dup.hw = &help.Writer{
+		Providers: dup.configurator.providers,
+		Factory:   dup.configurator.factory,
+	}
 
 	return &dup
 }

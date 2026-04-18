@@ -62,13 +62,13 @@ func (p *Provider) Provide(_ context.Context, v string) (string, bool, error) {
 			continue
 		}
 
-		res, ok := t.(map[string]interface{})
+		next, ok := t.(map[string]interface{})
 
 		if !ok {
 			return "", false, ErrJSONMalformated
 		}
 
-		cur = res
+		cur = next
 	}
 
 	return stringifyValue(res), true, nil

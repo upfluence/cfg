@@ -20,3 +20,13 @@ func TestParse(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, []int64{1, 2, 3}, vs)
 }
+
+func TestParseUnsupportedType(t *testing.T) {
+	type unsupported struct{ Ch chan int }
+
+	var v unsupported
+
+	err := Parse("foo", &v)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "unsupported type")
+}

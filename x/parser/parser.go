@@ -2,6 +2,7 @@ package parser
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 
 	"github.com/upfluence/cfg/internal/reflectutil"
@@ -31,7 +32,13 @@ func (p *Parser) Parse(data string, target interface{}) error {
 		return ErrShouldBePtr
 	}
 
-	return p.sf.Build(v.Type()).Set(data, reflectutil.IndirectedValue(v))
+	s := p.sf.Build(v.Type())
+
+	if s == nil {
+		return fmt.Errorf("x/parser: unsupported type %s", v.Type())
+	}
+
+	return s.Set(data, reflectutil.IndirectedValue(v))
 }
 
 func Parse(data string, target interface{}, opts ...Option) error {

@@ -100,12 +100,21 @@ func walk(v reflect.Value, fn WalkFunc, a *Field) error {
 			continue
 		}
 
-		if sf.Type.Kind() == reflect.Ptr && nv.IsNil() {
+		wasNil := sf.Type.Kind() == reflect.Ptr && nv.IsNil()
+
+		if wasNil {
 			nv.Set(reflect.New(sf.Type.Elem()))
 		}
 
 		if err := walk(nv, fn, &f); err != nil {
 			return err
+		}
+
+		if wasNil && reflect.DeepEqual(
+			nv.Elem().Interface(),
+			reflect.New(sf.Type.Elem()).Elem().Interface(),
+		) {
+			nv.Set(reflect.Zero(sf.Type))
 		}
 	}
 

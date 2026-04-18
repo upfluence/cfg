@@ -119,8 +119,10 @@ func (df *defaultFactory) buildBasicParser(t reflect.Type) (parser, bool) {
 	switch {
 	case k == reflect.String:
 		return stringParser, ptr
-	case k >= reflect.Int && k <= reflect.Uint64:
+	case k >= reflect.Int && k <= reflect.Int64:
 		return &intParser{transformer: intTransformers[k]}, ptr
+	case k >= reflect.Uint && k <= reflect.Uint64:
+		return &uintParser{transformer: intTransformers[k]}, ptr
 	case k == reflect.Float32 || k == reflect.Float64:
 		return floatParser(k), ptr
 	case k == reflect.Bool:
@@ -304,7 +306,7 @@ func (mp *mapParser) parse(v string, ptr bool) (interface{}, error) {
 			return nil, errors.Wrapf(err, "%q is not a correct key/value clause", v)
 		}
 
-		if len(vs) != 2 {
+		if len(vs) < 2 {
 			continue
 		}
 
@@ -314,7 +316,7 @@ func (mp *mapParser) parse(v string, ptr bool) (interface{}, error) {
 			return nil, err
 		}
 
-		v, err := mp.vp.parse(vs[1], mp.vptr)
+		v, err := mp.vp.parse(strings.Join(vs[1:], "="), mp.vptr)
 
 		if err != nil {
 			return nil, err
@@ -382,7 +384,7 @@ func (fp floatParser) parse(value string, ptr bool) (interface{}, error) {
 	}
 
 	if reflect.Kind(fp) == reflect.Float32 {
-		return float32(fp), nil
+		return float32(v), nil
 	}
 
 	return v, nil
@@ -402,6 +404,22 @@ func (s *intParser) parse(value string, ptr bool) (interface{}, error) {
 	}
 
 	return s.transformer(v, ptr), nil
+}
+
+type uintParser struct {
+	transformer intTransformer
+}
+
+func (*uintParser) String() string { return "integer" }
+
+func (s *uintParser) parse(value string, ptr bool) (interface{}, error) {
+	v, err := strconv.ParseUint(value, 10, 64)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return s.transformer(int64(v), ptr), nil
 }
 
 type timeParserOption struct {

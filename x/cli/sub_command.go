@@ -72,7 +72,7 @@ func (sc SubCommand) WriteHelp(w io.Writer, opts IntrospectionOptions) (int, err
 	}
 
 	if opts.Short {
-		return 0, nil
+		return n, nil
 	}
 
 	if sc.ShortHelp != nil {

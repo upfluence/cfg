@@ -25,6 +25,10 @@ func (p *faultyProvider) Provide(context.Context, string) (string, bool, error) 
 type KeyFn func(string) string
 
 func NewStaticProvider(tag string, vs map[string]string, kfn KeyFn) Provider {
+	if kfn == nil {
+		kfn = func(k string) string { return k }
+	}
+
 	return &staticProvider{vs: vs, tag: tag, kfn: kfn}
 }
 
