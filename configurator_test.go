@@ -183,6 +183,24 @@ type skipStruct struct {
 	Foo string `mock:"-"`
 }
 
+type customString string
+
+type customStringStruct struct {
+	Foo customString `mock:"foo"`
+}
+
+type customInt int64
+
+type customIntStruct struct {
+	Foo customInt `mock:"foo"`
+}
+
+type customBool bool
+
+type customBoolStruct struct {
+	Foo customBool `mock:"foo"`
+}
+
 type marshalerStruct struct {
 	Raw json.RawMessage
 	IP  net.IP
@@ -253,6 +271,27 @@ func TestConfigurator(t *testing.T) {
 			caseName:      "basic-int",
 			provider:      &mockProvider{st: map[string]string{"Foo": "42"}},
 			dataAssertion: deepEqual(&basicStruct2{42}),
+			errAssertion:  noError,
+		},
+		testCase{
+			input:         &customStringStruct{},
+			caseName:      "typedef-string",
+			provider:      &mockProvider{st: map[string]string{"foo": "bar"}},
+			dataAssertion: deepEqual(&customStringStruct{Foo: "bar"}),
+			errAssertion:  noError,
+		},
+		testCase{
+			input:         &customIntStruct{},
+			caseName:      "typedef-int",
+			provider:      &mockProvider{st: map[string]string{"foo": "42"}},
+			dataAssertion: deepEqual(&customIntStruct{Foo: 42}),
+			errAssertion:  noError,
+		},
+		testCase{
+			input:         &customBoolStruct{},
+			caseName:      "typedef-bool",
+			provider:      &mockProvider{st: map[string]string{"foo": "true"}},
+			dataAssertion: deepEqual(&customBoolStruct{Foo: true}),
 			errAssertion:  noError,
 		},
 		testCase{

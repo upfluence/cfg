@@ -199,7 +199,13 @@ func (s *parserSetter) Set(value string, t reflect.Value) error {
 		return err
 	}
 
-	t.Set(reflect.ValueOf(v))
+	rv := reflect.ValueOf(v)
+
+	if rv.Type() != t.Type() {
+		rv = rv.Convert(t.Type())
+	}
+
+	t.Set(rv)
 
 	return nil
 }
