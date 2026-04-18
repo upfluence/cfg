@@ -6,6 +6,9 @@ import (
 	"os"
 	"os/exec"
 
+	"github.com/upfluence/log"
+	"github.com/upfluence/log/record"
+
 	"github.com/upfluence/cfg"
 )
 
@@ -16,6 +19,8 @@ type CommandContext struct {
 	Stdin  io.Reader
 	Stdout io.Writer
 	Stderr io.Writer
+
+	Logger log.Logger
 
 	Definitions []CommandDefinition
 
@@ -35,6 +40,7 @@ func newCommandContext(name string, cmds []string, args map[string]string, c cfg
 		Stdin:        os.Stdin,
 		Stdout:       os.Stdout,
 		Stderr:       os.Stderr,
+		Logger:       newLogger(os.Stdout, os.Stderr, record.Notice),
 		args:         args,
 		appName:      name,
 		wd:           wd,

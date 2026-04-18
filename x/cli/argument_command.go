@@ -45,6 +45,7 @@ func (sc ArgumentCommand) Run(ctx context.Context, cctx CommandContext) error {
 		}
 
 		_, err = sc.WriteSynopsis(cctx.Stderr, cctx.introspectionOptions())
+
 		return err
 	}
 

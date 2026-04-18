@@ -419,7 +419,7 @@ func (s *uintParser) parse(value string, ptr bool) (interface{}, error) {
 		return nil, err
 	}
 
-	return s.transformer(int64(v), ptr), nil
+	return s.transformer(int64(v), ptr), nil //nolint:gosec // bit pattern preserved; transformer casts to target uint type
 }
 
 type timeParserOption struct {

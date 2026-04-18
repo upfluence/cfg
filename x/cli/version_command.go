@@ -2,7 +2,6 @@ package cli
 
 import (
 	"context"
-	"fmt"
 	"io"
 )
 
@@ -19,7 +18,8 @@ func (vc *versionCommand) WriteHelp(w io.Writer, _ IntrospectionOptions) (int, e
 	return io.WriteString(w, "Print the app version")
 }
 
-func (vc *versionCommand) Run(ctx context.Context, cctx CommandContext) error {
-	fmt.Fprintf(cctx.Stdout, "%s/%s\n", vc.name, vc.version)
+func (vc *versionCommand) Run(_ context.Context, cctx CommandContext) error {
+	cctx.Logger.Noticef("%s/%s", vc.name, vc.version)
+
 	return nil
 }

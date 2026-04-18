@@ -2,8 +2,9 @@ package cli
 
 import (
 	"context"
-	"fmt"
 	"io"
+
+	"github.com/upfluence/log/record"
 )
 
 type argProvider map[string]string
@@ -22,8 +23,22 @@ type Command interface {
 }
 
 type baseConfig struct {
-	Help    bool `flag:"h,help" help:"Display this message"`
-	Version bool `flag:"v,version" help:"Display the app version"`
+	Help     bool      `flag:"h,help" help:"Display this message"`
+	Version  bool      `flag:"v,version" help:"Display the app version"`
+	Verbose  bool      `flag:"verbose" help:"Enable verbose logging"`
+	LogLevel *logLevel `flag:"log-level" help:"Set the log level (debug, info, notice, warning, error)"`
+}
+
+func (bc baseConfig) logLevel() record.Level {
+	if bc.LogLevel != nil {
+		return record.Level(*bc.LogLevel)
+	}
+
+	if bc.Verbose {
+		return record.Debug
+	}
+
+	return record.Notice
 }
 
 type baseCommand struct {
@@ -40,6 +55,8 @@ func (bc *baseCommand) Run(ctx context.Context, cctx CommandContext) error {
 		return err
 	}
 
+	cctx.Logger = newLogger(cctx.Stdout, cctx.Stderr, cfg.logLevel())
+
 	if cfg.Version {
 		return bc.versionCmd.Run(ctx, cctx)
 	}
@@ -49,8 +66,9 @@ func (bc *baseCommand) Run(ctx context.Context, cctx CommandContext) error {
 	}
 
 	if bc.Command == nil {
-		_, err := fmt.Fprintf(cctx.Stderr, "command not implemented")
-		return err
+		cctx.Logger.Error("command not implemented")
+
+		return nil
 	}
 
 	return bc.Command.Run(ctx, cctx)

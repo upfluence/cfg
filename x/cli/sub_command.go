@@ -191,6 +191,7 @@ func (sc SubCommand) Run(ctx context.Context, cctx CommandContext) error {
 		}
 
 		_, err := sc.WriteSynopsis(cctx.Stderr, cctx.introspectionOptions())
+
 		return err
 	}
 
