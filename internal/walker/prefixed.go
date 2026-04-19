@@ -1,22 +1,31 @@
 package walker
 
+import "reflect"
+
 // Prefixed is an optional interface that a value passed to Walk can
-// implement to inject dynamic key prefix segments.  When Walk receives a
-// Prefixed value it builds a synthetic ancestor chain from the prefix
-// segments and walks the inner value returned by WalkValue.
+// implement to inject a dynamic ancestor chain.  When Walk receives a
+// Prefixed value it uses the ancestor returned by WalkAncestor and
+// walks the inner value returned by WalkValue.
 type Prefixed interface {
-	WalkPrefix() []string
+	WalkAncestor() *Field
 	WalkValue() any
 }
 
-// SubKeyPrefixed is a Prefixed implementation that injects a list of
-// prefix segments before walking an inner struct value.  It is used by
-// the configurator and help/synopsis writers to handle dynamic
-// map[string]Struct and []Struct fields.
+// SubKeyPrefixed is a Prefixed implementation used by the configurator
+// and help/synopsis writers to handle dynamic map[string]Struct and
+// []Struct fields.  It preserves the real ancestor Field (with struct
+// tags) and appends one synthetic segment for the sub-key.
 type SubKeyPrefixed struct {
-	Prefix []string
-	Value  any
+	Ancestor *Field
+	SubKey   string
+	Value    any
 }
 
-func (p *SubKeyPrefixed) WalkPrefix() []string { return p.Prefix }
-func (p *SubKeyPrefixed) WalkValue() any       { return p.Value }
+func (p *SubKeyPrefixed) WalkAncestor() *Field {
+	return &Field{
+		Field:    reflect.StructField{Name: p.SubKey},
+		Ancestor: p.Ancestor,
+	}
+}
+
+func (p *SubKeyPrefixed) WalkValue() any { return p.Value }

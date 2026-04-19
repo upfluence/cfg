@@ -4,7 +4,6 @@ import (
 	"context"
 	"os"
 	"reflect"
-	"slices"
 	"sort"
 	"strconv"
 
@@ -242,7 +241,6 @@ func (c *configurator) populateMapField(ctx context.Context, f *walker.Field) er
 		return walker.SkipStruct
 	}
 
-	fieldPrefix := f.FieldPrefix()
 	fv := reflectutil.IndirectedValue(f.Value).FieldByName(f.Field.Name)
 	mapVal := reflect.MakeMap(ft)
 
@@ -250,8 +248,9 @@ func (c *configurator) populateMapField(ctx context.Context, f *walker.Field) er
 		elem := reflect.New(structType)
 
 		prefixed := &walker.SubKeyPrefixed{
-			Prefix: append(fieldPrefix, subKey),
-			Value:  elem.Interface(),
+			Ancestor: f,
+			SubKey:   subKey,
+			Value:    elem.Interface(),
 		}
 
 		if err := c.Populate(ctx, prefixed); err != nil {
@@ -312,7 +311,6 @@ func (c *configurator) populateSliceField(ctx context.Context, f *walker.Field) 
 		return indices[i].index < indices[j].index
 	})
 
-	fieldPrefix := f.FieldPrefix()
 	fv := reflectutil.IndirectedValue(f.Value).FieldByName(f.Field.Name)
 	sliceVal := reflect.MakeSlice(ft, len(indices), len(indices))
 
@@ -320,8 +318,9 @@ func (c *configurator) populateSliceField(ctx context.Context, f *walker.Field) 
 		elem := reflect.New(structType)
 
 		prefixed := &walker.SubKeyPrefixed{
-			Prefix: append(slices.Clone(fieldPrefix), ik.key),
-			Value:  elem.Interface(),
+			Ancestor: f,
+			SubKey:   ik.key,
+			Value:    elem.Interface(),
 		}
 
 		if err := c.Populate(ctx, prefixed); err != nil {

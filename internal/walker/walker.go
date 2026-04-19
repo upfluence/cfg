@@ -2,7 +2,6 @@ package walker
 
 import (
 	"reflect"
-	"slices"
 	"unicode"
 
 	"github.com/upfluence/errors"
@@ -20,21 +19,6 @@ type Field struct {
 	Ancestor *Field
 }
 
-// FieldPrefix returns the chain of field names from root to this field
-// (inclusive), suitable for use as prefix segments with the Prefixed
-// interface.
-func (f *Field) FieldPrefix() []string {
-	var segments []string
-
-	for cur := f; cur != nil; cur = cur.Ancestor {
-		segments = append(segments, cur.Field.Name)
-	}
-
-	slices.Reverse(segments)
-
-	return segments
-}
-
 type WalkFunc func(*Field) error
 
 func Walk(in any, fn WalkFunc) error {
@@ -50,14 +34,25 @@ func walkValue(in any, fn WalkFunc, ancestor *Field) error {
 }
 
 func walkPrefixed(p Prefixed, fn WalkFunc, ancestor *Field) error {
-	for _, seg := range p.WalkPrefix() {
-		ancestor = &Field{
-			Field:    reflect.StructField{Name: seg},
-			Ancestor: ancestor,
-		}
+	extra := p.WalkAncestor()
+
+	if extra == nil {
+		return walkValue(p.WalkValue(), fn, ancestor)
 	}
 
-	return walkValue(p.WalkValue(), fn, ancestor)
+	// Clone the extra chain and graft it onto the incoming ancestor
+	// so that the original chain is not mutated.
+	clone := &Field{Field: extra.Field}
+	tip := clone
+
+	for cur := extra.Ancestor; cur != nil; cur = cur.Ancestor {
+		tip.Ancestor = &Field{Field: cur.Field}
+		tip = tip.Ancestor
+	}
+
+	tip.Ancestor = ancestor
+
+	return walkValue(p.WalkValue(), fn, clone)
 }
 
 func walkStruct(in any, fn WalkFunc, ancestor *Field) error {
