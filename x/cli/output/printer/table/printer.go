@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
-	"text/tabwriter"
 
 	"github.com/upfluence/errors"
 
@@ -14,8 +13,6 @@ import (
 	"github.com/upfluence/cfg/x/cli"
 	"github.com/upfluence/cfg/x/cli/output/printer"
 )
-
-const key = "table"
 
 type columns struct {
 	available []string
@@ -39,21 +36,29 @@ type config struct {
 }
 
 type tablePrinter[T any] struct {
+	key          string
 	columns      []string
 	extractValue func(T, string) string
+	formatter    FormatterFunc
 }
 
-func NewPrinter[T any](cols []string, extractValue func(T, string) string) printer.Printer[[]T] {
+func NewPrinter[T any](key string, ff FormatterFunc, cols []string, extractValue func(T, string) string) printer.Printer[[]T] {
 	return &tablePrinter[T]{
+		key:          key,
 		columns:      cols,
 		extractValue: extractValue,
+		formatter:    ff,
 	}
 }
 
-func NewDefaultPrinter[T any]() printer.Printer[[]T] {
+func introspectType[T any](key string) ([]string, func(T, string) string) {
 	var (
 		cols          []string
 		indexByColumn = make(map[string][]int)
+
+		colProvider = provider.WrapFullyQualifiedProvider(
+			provider.NewStaticProvider(key, nil, nil),
+		)
 	)
 
 	walker.Walk( //nolint:errcheck
@@ -69,12 +74,13 @@ func NewDefaultPrinter[T any]() printer.Printer[[]T] {
 				return nil
 			}
 
-			col, ok := buildColumnName(f)
+			keys := walker.BuildFieldKeys(colProvider, f, false)
 
-			if !ok {
+			if len(keys) == 0 {
 				return nil
 			}
 
+			col := keys[0]
 			cols = append(cols, col)
 			indexByColumn[col] = buildIndex(f)
 
@@ -82,22 +88,25 @@ func NewDefaultPrinter[T any]() printer.Printer[[]T] {
 		},
 	)
 
-	return &tablePrinter[T]{
-		columns: cols,
-		extractValue: func(v T, col string) string {
-			rv := reflect.ValueOf(v)
-			idx, ok := indexByColumn[col]
+	return cols, func(v T, col string) string {
+		rv := reflect.ValueOf(v)
+		idx, ok := indexByColumn[col]
 
-			if !ok {
-				return ""
-			}
+		if !ok {
+			return ""
+		}
 
-			return fmt.Sprintf("%v", rv.FieldByIndex(idx).Interface())
-		},
+		return fmt.Sprintf("%v", rv.FieldByIndex(idx).Interface())
 	}
 }
 
-func (p *tablePrinter[T]) Key() string { return key }
+func NewDefaultPrinter[T any](key string, ff FormatterFunc) printer.Printer[[]T] {
+	cols, extractValue := introspectType[T](key)
+
+	return NewPrinter[T](key, ff, cols, extractValue)
+}
+
+func (p *tablePrinter[T]) Key() string { return p.key }
 
 func (p *tablePrinter[T]) CommandDefinition() cli.CommandDefinition {
 	return cli.CommandDefinition{
@@ -110,20 +119,6 @@ func (p *tablePrinter[T]) CommandDefinition() cli.CommandDefinition {
 			},
 		},
 	}
-}
-
-var columnProvider = provider.WrapFullyQualifiedProvider(
-	provider.NewStaticProvider("table", nil, nil),
-)
-
-func buildColumnName(f *walker.Field) (string, bool) {
-	keys := walker.BuildFieldKeys(columnProvider, f, false)
-
-	if len(keys) == 0 {
-		return "", false
-	}
-
-	return keys[0], true
 }
 
 func buildIndex(f *walker.Field) []int {
@@ -154,9 +149,9 @@ func (p *tablePrinter[T]) Print(ctx context.Context, cctx cli.CommandContext, vs
 	}
 
 	cols := cfg.Columns.selected
-	tw := tabwriter.NewWriter(cctx.Stdout, 0, 0, 2, ' ', 0)
+	f := p.formatter(cctx.Stdout)
 
-	if _, err := fmt.Fprintln(tw, strings.Join(cols, "\t")); err != nil {
+	if err := f.WriteLine(cols); err != nil {
 		return err //nolint:wrapcheck
 	}
 
@@ -167,10 +162,10 @@ func (p *tablePrinter[T]) Print(ctx context.Context, cctx cli.CommandContext, vs
 			vals[i] = p.extractValue(v, col)
 		}
 
-		if _, err := fmt.Fprintln(tw, strings.Join(vals, "\t")); err != nil {
+		if err := f.WriteLine(vals); err != nil {
 			return err //nolint:wrapcheck
 		}
 	}
 
-	return tw.Flush() //nolint:wrapcheck
+	return f.Flush()
 }
