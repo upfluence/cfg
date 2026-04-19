@@ -142,8 +142,8 @@ func TestPrintDefaults(t *testing.T) {
 			name: "slice of structs shows inner fields with <N> placeholder",
 			in:   &sliceStructConfig{},
 			out: "Arguments:\n" +
-				"\t- Workers.<N>.Host: string (env: WORKERS_<N>_HOST, flag: --workers.<-n>.host)\n" +
-				"\t- Workers.<N>.Port: integer (env: WORKERS_<N>_PORT, flag: --workers.<-n>.port)\n",
+				"\t- Workers.<N>.Host: string (env: WORKERS_<N>_HOST, flag: --workers.<n>.host)\n" +
+				"\t- Workers.<N>.Port: integer (env: WORKERS_<N>_PORT, flag: --workers.<n>.port)\n",
 		},
 		{
 			name: "map of ptr structs shows inner fields with <key> placeholder",

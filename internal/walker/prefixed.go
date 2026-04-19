@@ -1,6 +1,10 @@
 package walker
 
-import "reflect"
+import (
+	"reflect"
+
+	"github.com/upfluence/cfg/internal/reflectutil"
+)
 
 // Prefixed is an optional interface that a value passed to Walk can
 // implement to inject a dynamic ancestor chain.  When Walk receives a
@@ -29,3 +33,29 @@ func (p *SubKeyPrefixed) WalkAncestor() *Field {
 }
 
 func (p *SubKeyPrefixed) WalkValue() any { return p.Value }
+
+// BuildSubKeyField returns a SubKeyPrefixed for a map[string]Struct or
+// []Struct field, using "<key>" or "<N>" as the placeholder sub-key.
+// It returns nil if the field type is neither.
+func BuildSubKeyField(f *Field) *SubKeyPrefixed {
+	var (
+		placeholder string
+		structType  reflect.Type
+	)
+
+	if st := reflectutil.SubKeyMapElem(f.Field.Type); st != nil {
+		placeholder = "<key>"
+		structType = st
+	} else if st := reflectutil.SubKeySliceElem(f.Field.Type); st != nil {
+		placeholder = "<N>"
+		structType = st
+	} else {
+		return nil
+	}
+
+	return &SubKeyPrefixed{
+		Ancestor: f,
+		SubKey:   placeholder,
+		Value:    reflect.New(structType).Interface(),
+	}
+}

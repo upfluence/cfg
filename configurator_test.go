@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -916,8 +917,20 @@ type prefixedConfig struct {
 	value  any
 }
 
-func (p *prefixedConfig) WalkPrefix() []string { return p.prefix }
-func (p *prefixedConfig) WalkValue() any       { return p.value }
+func (p *prefixedConfig) WalkAncestor() *walker.Field {
+	var ancestor *walker.Field
+
+	for _, seg := range p.prefix {
+		ancestor = &walker.Field{
+			Field:    reflect.StructField{Name: seg},
+			Ancestor: ancestor,
+		}
+	}
+
+	return ancestor
+}
+
+func (p *prefixedConfig) WalkValue() any { return p.value }
 
 type outerPrefixedConfig struct {
 	Direct string `mock:"direct"`

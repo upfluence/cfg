@@ -141,29 +141,11 @@ func (w *Writer) buildWalkFn(out io.Writer, n *int, includeDefaults bool) walker
 	}
 }
 
-// writeSubKeyField handles map[string]Struct and []Struct fields by
-// walking the element struct type with a placeholder prefix segment so
-// that each inner field appears in the help output.
 func (w *Writer) writeSubKeyField(out io.Writer, n *int, f *walker.Field) error {
-	var (
-		placeholder string
-		structType  reflect.Type
-	)
+	prefixed := walker.BuildSubKeyField(f)
 
-	if st := reflectutil.SubKeyMapElem(f.Field.Type); st != nil {
-		placeholder = "<key>"
-		structType = st
-	} else if st := reflectutil.SubKeySliceElem(f.Field.Type); st != nil {
-		placeholder = "<N>"
-		structType = st
-	} else {
+	if prefixed == nil {
 		return nil
-	}
-
-	prefixed := &walker.SubKeyPrefixed{
-		Ancestor: f,
-		SubKey:   placeholder,
-		Value:    reflect.New(structType).Interface(),
 	}
 
 	return walker.Walk(prefixed, w.buildWalkFn(out, n, false))
