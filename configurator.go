@@ -11,6 +11,7 @@ import (
 	"github.com/upfluence/cfg/internal/setter"
 	"github.com/upfluence/cfg/internal/walker"
 	"github.com/upfluence/cfg/provider"
+	dflt "github.com/upfluence/cfg/provider/default"
 	"github.com/upfluence/cfg/provider/env"
 	"github.com/upfluence/cfg/provider/flags"
 )
@@ -45,7 +46,11 @@ func NewDefaultConfigurator(providers ...provider.Provider) Configurator {
 	cfg := newConfigurator(
 		[]Option{
 			WithProviders(
-				append(providers, env.NewDefaultProvider(), flags.NewDefaultProvider())...,
+				append(
+					append([]provider.Provider{dflt.Provider{}}, providers...),
+					env.NewDefaultProvider(),
+					flags.NewDefaultProvider(),
+				)...,
 			),
 		},
 	)
@@ -111,9 +116,12 @@ func (c *configurator) walkFunc(ctx context.Context, f *walker.Field) error {
 			ok  bool
 			k   string
 			err error
+
+			fqp           = provider.WrapFullyQualifiedProvider(p)
+			ignoreMissing = c.ignoreMissingTag
 		)
 
-		for _, k = range walker.BuildFieldKeys(p.StructTag(), f, c.ignoreMissingTag) {
+		for _, k = range walker.BuildFieldKeys(fqp, f, ignoreMissing) {
 			v, ok, err = p.Provide(ctx, k)
 
 			if err != nil {

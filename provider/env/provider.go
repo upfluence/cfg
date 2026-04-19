@@ -28,12 +28,20 @@ func (p *Provider) buildPrefix() string {
 	return strings.ToUpper(p.prefix) + "_"
 }
 
+func (*Provider) DefaultFieldValue(fieldName string) string {
+	return strings.ToUpper(fieldName)
+}
+
+func (*Provider) JoinFieldKeys(prefix, key string) string {
+	return prefix + "_" + key
+}
+
 func (p *Provider) FormatKey(n string) string {
-	return p.buildPrefix() + strings.ToUpper(strings.Replace(n, ".", "_", -1))
+	return p.buildPrefix() + n
 }
 
 func (p *Provider) Provide(_ context.Context, v string) (string, bool, error) {
-	res, ok := os.LookupEnv(p.FormatKey(v))
+	res, ok := os.LookupEnv(p.buildPrefix() + v)
 
 	return res, ok, nil
 }

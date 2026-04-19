@@ -3,6 +3,8 @@ package walker
 import (
 	"reflect"
 	"strings"
+
+	"github.com/upfluence/cfg/provider"
 )
 
 func walkFields(f *Field, fn func(reflect.StructField) bool) bool {
@@ -25,8 +27,8 @@ func walkFields(f *Field, fn func(reflect.StructField) bool) bool {
 	return true
 }
 
-func buildStructFieldKey(t string, sf reflect.StructField, ignoreMissingTag bool) ([]string, bool) {
-	if t != "" {
+func buildStructFieldKey(p provider.FullyQualifiedProvider, sf reflect.StructField, ignoreMissingTag bool) ([]string, bool) {
+	if t := p.StructTag(); t != "" {
 		switch v, ok := sf.Tag.Lookup(t); v {
 		case "":
 			if ok {
@@ -47,14 +49,20 @@ func buildStructFieldKey(t string, sf reflect.StructField, ignoreMissingTag bool
 		return nil, true
 	}
 
-	return []string{sf.Name}, true
+	dfv := p.DefaultFieldValue(sf.Name)
+
+	if dfv == "" {
+		return nil, true
+	}
+
+	return []string{dfv}, true
 }
 
-func BuildFieldKeys(t string, f *Field, ignoreMissingTag bool) []string {
+func BuildFieldKeys(p provider.FullyQualifiedProvider, f *Field, ignoreMissingTag bool) []string {
 	var fss [][]string
 
 	if ok := walkFields(f, func(sf reflect.StructField) bool {
-		fs, ok := buildStructFieldKey(t, sf, ignoreMissingTag)
+		fs, ok := buildStructFieldKey(p, sf, ignoreMissingTag)
 
 		if !ok {
 			return false
@@ -70,13 +78,17 @@ func BuildFieldKeys(t string, f *Field, ignoreMissingTag bool) []string {
 	}
 
 	if len(fss) == 0 {
+		if p.DefaultFieldValue("") == "" {
+			return nil
+		}
+
 		return []string{"config"}
 	}
 
-	return joinPermutation(fss, ".")
+	return joinPermutation(fss, p.JoinFieldKeys)
 }
 
-func joinPermutation(fss [][]string, delim string) []string {
+func joinPermutation(fss [][]string, join func(string, string) string) []string {
 	switch len(fss) {
 	case 0:
 		return nil
@@ -85,13 +97,13 @@ func joinPermutation(fss [][]string, delim string) []string {
 	}
 
 	left := fss[0]
-	right := joinPermutation(fss[1:], delim)
+	right := joinPermutation(fss[1:], join)
 
 	var res []string
 
 	for _, l := range left {
 		for _, r := range right {
-			res = append(res, strings.Join([]string{l, r}, delim))
+			res = append(res, join(l, r))
 		}
 	}
 

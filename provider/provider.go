@@ -46,18 +46,50 @@ func (sp *staticProvider) Provide(_ context.Context, k string) (string, bool, er
 	return v, ok, nil
 }
 
-type KeyFormatterProvider interface {
+// FullyQualifiedProvider is an optional interface that providers can
+// implement to customise how struct field keys are built by the walker.
+//
+// DefaultFieldValue returns the key to use when a struct field does not
+// carry the provider's struct tag.  Returning "" causes the field to be
+// skipped for this provider.
+//
+// JoinFieldKeys controls how ancestor and leaf keys are concatenated.
+// The standard provider joins them with "."; other providers may need a
+// different strategy (e.g. the default-value provider filters out empty
+// parts).
+type FullyQualifiedProvider interface {
 	Provider
 
+	DefaultFieldValue(fieldName string) string
+	JoinFieldKeys(prefix, key string) string
+}
+
+// WrapFullyQualifiedProvider returns p as a FullyQualifiedProvider.  If
+// p already implements the interface it is returned as-is; otherwise it
+// is wrapped with standard defaults (field name fallback and dot-joined
+// keys).
+func WrapFullyQualifiedProvider(p Provider) FullyQualifiedProvider {
+	if fqp, ok := p.(FullyQualifiedProvider); ok {
+		return fqp
+	}
+
+	return &defaultFQProvider{Provider: p}
+}
+
+type defaultFQProvider struct {
+	Provider
+}
+
+func (d *defaultFQProvider) DefaultFieldValue(fieldName string) string {
+	return fieldName
+}
+
+func (d *defaultFQProvider) JoinFieldKeys(prefix, key string) string {
+	return prefix + "." + key
+}
+
+// KeyFormatter is an optional interface that providers can implement to
+// control how keys are displayed in help and synopsis output.
+type KeyFormatter interface {
 	FormatKey(string) string
-}
-
-type KeyFormatterFunc struct {
-	Provider
-
-	KeyFormatFunc func(string) string
-}
-
-func (kff KeyFormatterFunc) FormatKey(n string) string {
-	return kff.KeyFormatFunc(n)
 }

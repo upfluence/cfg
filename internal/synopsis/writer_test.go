@@ -27,6 +27,11 @@ type parserImpl struct {
 
 func (*parserImpl) Parse(string) error { return nil }
 
+type kebabCaseStruct struct {
+	LogLevel   string
+	MaxRetries int
+}
+
 func TestPrintDefaults(t *testing.T) {
 	for _, tt := range []struct {
 		in  interface{}
@@ -43,6 +48,10 @@ func TestPrintDefaults(t *testing.T) {
 		{
 			in:  &nestedStruct{},
 			out: "[--parser] ",
+		},
+		{
+			in:  &kebabCaseStruct{},
+			out: "[--log-level] [--max-retries] ",
 		},
 	} {
 		var (

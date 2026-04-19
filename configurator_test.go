@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/upfluence/errors"
 
 	"github.com/upfluence/cfg/internal/walker"
@@ -615,6 +616,62 @@ func TestConfigurator(t *testing.T) {
 				tCase.dataAssertion(t, v)
 			},
 		)
+	}
+}
+
+func TestDefaultProvider(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		have any
+		want any
+	}{
+		{
+			name: "string default",
+			have: &struct {
+				Foo string `default:"bar"`
+			}{},
+			want: &struct {
+				Foo string `default:"bar"`
+			}{Foo: "bar"},
+		},
+		{
+			name: "int default",
+			have: &struct {
+				V int `default:"42"`
+			}{},
+			want: &struct {
+				V int `default:"42"`
+			}{V: 42},
+		},
+		{
+			name: "env overrides default",
+			have: &struct {
+				Foo string `default:"fallback" env:"TEST_DEFAULT_OVERRIDE"`
+			}{},
+			want: &struct {
+				Foo string `default:"fallback" env:"TEST_DEFAULT_OVERRIDE"`
+			}{Foo: "from_env"},
+		},
+		{
+			name: "no default tag leaves zero value",
+			have: &struct {
+				Foo string
+			}{},
+			want: &struct {
+				Foo string
+			}{},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.name == "env overrides default" {
+				t.Setenv("TEST_DEFAULT_OVERRIDE", "from_env")
+			}
+
+			err := NewDefaultConfigurator().Populate(context.Background(), tc.have)
+
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, tc.have)
+		})
 	}
 }
 

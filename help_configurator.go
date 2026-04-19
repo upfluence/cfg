@@ -9,7 +9,7 @@ import (
 )
 
 type helpConfig struct {
-	Help bool `flag:"h,help" env:"HELP"`
+	Help bool `env:"HELP" flag:"h,help"`
 }
 
 type helpConfigurator struct {

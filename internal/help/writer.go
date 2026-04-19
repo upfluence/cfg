@@ -10,6 +10,7 @@ import (
 	"github.com/upfluence/cfg/internal/setter"
 	"github.com/upfluence/cfg/internal/walker"
 	"github.com/upfluence/cfg/provider"
+	dflt "github.com/upfluence/cfg/provider/default"
 	"github.com/upfluence/cfg/provider/env"
 	"github.com/upfluence/cfg/provider/flags"
 )
@@ -20,6 +21,7 @@ var (
 	DefaultWriter = &Writer{
 		Factory: setter.DefaultFactory,
 		Providers: []provider.Provider{
+			dflt.Provider{},
 			env.NewDefaultProvider(),
 			flags.NewDefaultProvider(),
 		},
@@ -44,7 +46,13 @@ func (w *Writer) writeConfig(out io.Writer, in interface{}) (int, error) {
 				return nil
 			}
 
-			fks := walker.BuildFieldKeys("", f, w.IgnoreMissingTag)
+			fks := walker.BuildFieldKeys(
+				provider.WrapFullyQualifiedProvider(
+					provider.NewStaticProvider("", nil, nil),
+				),
+				f,
+				w.IgnoreMissingTag,
+			)
 
 			if len(fks) == 0 {
 				return nil
@@ -57,9 +65,7 @@ func (w *Writer) writeConfig(out io.Writer, in interface{}) (int, error) {
 			var b bytes.Buffer
 
 			b.WriteString("\t- ")
-
 			b.WriteString(fks[0])
-
 			b.WriteString(": ")
 			b.WriteString(s.String())
 
@@ -68,46 +74,21 @@ func (w *Writer) writeConfig(out io.Writer, in interface{}) (int, error) {
 				b.WriteString(h)
 			}
 
-			fv := reflectutil.IndirectedValue(f.Value).FieldByName(f.Field.Name)
-			if !reflectutil.IsZero(fv) {
-				v := reflectutil.IndirectedValue(fv).Interface()
+			defaultValue := w.fieldDefault(f)
+			providedKeys, tagDefault := w.providerKeys(f)
 
-				b.WriteString(" (default: ")
-
-				if ss, ok := v.(fmt.Stringer); ok {
-					b.WriteString(ss.String())
-				} else {
-					fmt.Fprintf(&b, "%+v", v)
-				}
-
-				b.WriteString(")")
-			}
-
-			var providedKeys []string
-
-			for _, p := range w.Providers {
-				if kf, ok := p.(provider.KeyFormatterProvider); ok {
-					var ks []string
-
-					for _, k := range walker.BuildFieldKeys(
-						p.StructTag(),
-						f,
-						w.IgnoreMissingTag,
-					) {
-						ks = append(ks, kf.FormatKey(k))
-					}
-
-					if len(ks) > 0 {
-						providedKeys = append(
-							providedKeys,
-							fmt.Sprintf("%s: %s", p.StructTag(), strings.Join(ks, ", ")),
-						)
-					}
-				}
+			if tagDefault != "" {
+				defaultValue = tagDefault
 			}
 
 			if len(providedKeys) == 0 {
 				return nil
+			}
+
+			if defaultValue != "" {
+				b.WriteString(" (default: ")
+				b.WriteString(defaultValue)
+				b.WriteString(")")
 			}
 
 			b.WriteString(" (")
@@ -123,6 +104,62 @@ func (w *Writer) writeConfig(out io.Writer, in interface{}) (int, error) {
 			return err
 		},
 	)
+}
+
+func (w *Writer) fieldDefault(f *walker.Field) string {
+	fv := reflectutil.IndirectedValue(f.Value).FieldByName(f.Field.Name)
+
+	if reflectutil.IsZero(fv) {
+		return ""
+	}
+
+	v := reflectutil.IndirectedValue(fv).Interface()
+
+	if ss, ok := v.(fmt.Stringer); ok {
+		return ss.String()
+	}
+
+	return fmt.Sprintf("%+v", v)
+}
+
+func (w *Writer) providerKeys(f *walker.Field) ([]string, string) {
+	var (
+		providedKeys []string
+		tagDefault   string
+	)
+
+	for _, p := range w.Providers {
+		if _, ok := p.(dflt.Provider); ok {
+			fqp := provider.WrapFullyQualifiedProvider(p)
+
+			if ks := walker.BuildFieldKeys(fqp, f, w.IgnoreMissingTag); len(ks) > 0 {
+				tagDefault = ks[0]
+			}
+
+			continue
+		}
+
+		fqp := provider.WrapFullyQualifiedProvider(p)
+
+		ks := walker.BuildFieldKeys(fqp, f, w.IgnoreMissingTag)
+
+		if len(ks) == 0 {
+			continue
+		}
+
+		if kf, ok := p.(provider.KeyFormatter); ok {
+			for i, k := range ks {
+				ks[i] = kf.FormatKey(k)
+			}
+		}
+
+		providedKeys = append(
+			providedKeys,
+			fmt.Sprintf("%s: %s", p.StructTag(), strings.Join(ks, ", ")),
+		)
+	}
+
+	return providedKeys, tagDefault
 }
 
 func (w *Writer) Write(out io.Writer, ins ...interface{}) (int, error) {

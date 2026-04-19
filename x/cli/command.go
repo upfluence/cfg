@@ -23,9 +23,9 @@ type Command interface {
 }
 
 type baseConfig struct {
-	Help     bool      `flag:"h,help" help:"Display this message"`
+	Help     bool      `flag:"h,help"    help:"Display this message"`
 	Version  bool      `flag:"v,version" help:"Display the app version"`
-	Verbose  bool      `flag:"verbose" help:"Enable verbose logging"`
+	Verbose  bool      `flag:"verbose"   help:"Enable verbose logging"`
 	LogLevel *logLevel `flag:"log-level" help:"Set the log level (debug, info, notice, warning, error)"`
 }
 

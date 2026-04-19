@@ -1,9 +1,11 @@
 package flags
 
 import (
+	"context"
 	"os"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/upfluence/cfg/internal/stringutil"
 	"github.com/upfluence/cfg/provider"
@@ -71,25 +73,62 @@ func parseFlags(args []string) map[string]string {
 	return res
 }
 
-func NewDefaultProvider() provider.KeyFormatterProvider {
+func NewDefaultProvider() *Provider {
 	return NewProvider(os.Args[1:])
 }
 
-func NewProvider(args []string) provider.KeyFormatterProvider {
-	return provider.KeyFormatterFunc{
-		Provider: provider.NewStaticProvider(
+func NewProvider(args []string) *Provider {
+	return &Provider{
+		sp: provider.NewStaticProvider(
 			StructTag,
 			parseFlags(args),
 			strings.ToLower,
 		),
-		KeyFormatFunc: func(n string) string {
-			n = strings.ToLower(n)
+	}
+}
 
-			if len(n) == 1 {
-				return "-" + n
+type Provider struct {
+	sp provider.Provider
+}
+
+func kebabCase(s string) string {
+	var b strings.Builder
+
+	for i, r := range s {
+		if unicode.IsUpper(r) {
+			if i > 0 {
+				b.WriteByte('-')
 			}
 
-			return "--" + n
-		},
+			b.WriteRune(unicode.ToLower(r))
+		} else {
+			b.WriteRune(r)
+		}
 	}
+
+	return b.String()
+}
+
+func (*Provider) StructTag() string { return StructTag }
+
+func (*Provider) DefaultFieldValue(fieldName string) string {
+	return kebabCase(fieldName)
+}
+
+func (*Provider) JoinFieldKeys(prefix, key string) string {
+	return prefix + "." + key
+}
+
+func (*Provider) FormatKey(n string) string {
+	n = strings.ToLower(n)
+
+	if len(n) == 1 {
+		return "-" + n
+	}
+
+	return "--" + n
+}
+
+func (p *Provider) Provide(ctx context.Context, k string) (string, bool, error) {
+	return p.sp.Provide(ctx, k)
 }

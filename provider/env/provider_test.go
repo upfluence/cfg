@@ -18,25 +18,25 @@ func TestProvider_Provide(t *testing.T) {
 	}{
 		{
 			name: "empty",
-			in:   "foo",
+			in:   "FOO",
 		},
 		{
 			name:      "simple no prefix",
-			in:        "foo",
+			in:        "FOO",
 			envValues: map[string]string{"FOO": "BAR"},
 			res:       "BAR",
 			exist:     true,
 		},
 		{
-			name:      "pointed value",
-			in:        "foo.bar",
+			name:      "nested value",
+			in:        "FOO_BAR",
 			envValues: map[string]string{"FOO_BAR": "BAR"},
 			res:       "BAR",
 			exist:     true,
 		},
 		{
 			name:      "with prefix",
-			in:        "foo",
+			in:        "FOO",
 			prefix:    "pref",
 			envValues: map[string]string{"PREF_FOO": "BAR"},
 			res:       "BAR",
@@ -44,12 +44,13 @@ func TestProvider_Provide(t *testing.T) {
 		},
 		{
 			name:      "empty string is present",
-			in:        "foo",
+			in:        "FOO",
 			envValues: map[string]string{"FOO": ""},
 			res:       "",
 			exist:     true,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			for k, v := range tt.envValues {
@@ -60,13 +61,17 @@ func TestProvider_Provide(t *testing.T) {
 			p := &Provider{prefix: tt.prefix}
 
 			got, got1, err := p.Provide(context.Background(), tt.in)
+
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Provider.Provide() error = %v, wantErr %v", err, tt.wantErr)
+
 				return
 			}
+
 			if got != tt.res {
 				t.Errorf("Provider.Provide() got = %v, want %v", got, tt.res)
 			}
+
 			if got1 != tt.exist {
 				t.Errorf("Provider.Provide() got1 = %v, want %v", got1, tt.exist)
 			}
