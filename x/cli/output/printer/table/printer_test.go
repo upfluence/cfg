@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/upfluence/cfg"
 	"github.com/upfluence/cfg/x/cli"
 )
 
@@ -19,7 +20,10 @@ type testRow struct {
 }
 
 func testCommandContext(buf *bytes.Buffer) cli.CommandContext {
-	return cli.CommandContext{Stdout: buf}
+	return cli.CommandContext{
+		Stdout:       buf,
+		Configurator: cfg.NewDefaultConfigurator(),
+	}
 }
 
 func TestNewPrinter(t *testing.T) {
@@ -97,7 +101,7 @@ func TestNewDefaultPrinter(t *testing.T) {
 		{
 			name:     "single row",
 			haveRows: []testRow{{Name: "alice", Age: 30, City: "paris"}},
-			want:     "NAME   AGE  CITY\nalice  30   paris\n",
+			want:     "Name   Age  City\nalice  30   paris\n",
 		},
 		{
 			name: "multiple rows",
@@ -105,12 +109,12 @@ func TestNewDefaultPrinter(t *testing.T) {
 				{Name: "alice", Age: 30, City: "paris"},
 				{Name: "bob", Age: 25, City: "london"},
 			},
-			want: "NAME   AGE  CITY\nalice  30   paris\nbob    25   london\n",
+			want: "Name   Age  City\nalice  30   paris\nbob    25   london\n",
 		},
 		{
 			name:     "empty slice",
 			haveRows: []testRow{},
-			want:     "NAME  AGE  CITY\n",
+			want:     "Name  Age  City\n",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -148,5 +152,24 @@ func TestNewDefaultPrinterNested(t *testing.T) {
 	})
 
 	require.NoError(t, err)
-	assert.Equal(t, "ID  INNER.VALUE\n1   foo\n2   bar\n", buf.String())
+	assert.Equal(t, "ID  Inner.Value\n1   foo\n2   bar\n", buf.String())
+}
+
+type taggedRow struct {
+	Name  string `table:"name"`
+	Email string `table:"email"`
+	Age   int    `table:"-"`
+}
+
+func TestNewDefaultPrinterWithTableTags(t *testing.T) {
+	p := NewDefaultPrinter[taggedRow]()
+
+	var buf bytes.Buffer
+
+	err := p.Print(context.Background(), testCommandContext(&buf), []taggedRow{
+		{Name: "alice", Email: "alice@example.com", Age: 30},
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, "name   email\nalice  alice@example.com\n", buf.String())
 }
