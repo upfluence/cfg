@@ -160,11 +160,11 @@ func (w *Writer) writeSubKeyField(out io.Writer, n *int, f *walker.Field) error 
 		return nil
 	}
 
-	prefix := f.FieldPrefix()
-	prefix = append(prefix, placeholder)
-	elem := reflect.New(structType)
-
-	prefixed := &walker.SubKeyPrefixed{Prefix: prefix, Value: elem.Interface()}
+	prefixed := &walker.SubKeyPrefixed{
+		Ancestor: f,
+		SubKey:   placeholder,
+		Value:    reflect.New(structType).Interface(),
+	}
 
 	return walker.Walk(prefixed, w.buildWalkFn(out, n, false))
 }

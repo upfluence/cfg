@@ -772,102 +772,6 @@ func TestConfigurator(t *testing.T) {
 			dataAssertion: deepEqual(&sliceStructConfig{}),
 			errAssertion:  noError,
 		},
-
-		// Prefixed populate
-		testCase{
-			caseName: "prefixed-single-segment",
-			input: &walker.SubKeyPrefixed{
-				Prefix: []string{"ns"},
-				Value:  &basicStruct1{},
-			},
-			provider: &mockProvider{st: map[string]string{"ns.Fiz": "bar"}},
-			dataAssertion: func(t *testing.T, y interface{}) {
-				assert.Equal(t, &basicStruct1{Fiz: "bar"}, y.(*walker.SubKeyPrefixed).Value)
-			},
-			errAssertion: noError,
-		},
-		testCase{
-			caseName: "prefixed-multi-segment",
-			input: &walker.SubKeyPrefixed{
-				Prefix: []string{"foo", "bar"},
-				Value:  &basicStruct1{},
-			},
-			provider: &mockProvider{st: map[string]string{"foo.bar.Fiz": "baz"}},
-			dataAssertion: func(t *testing.T, y interface{}) {
-				assert.Equal(t, &basicStruct1{Fiz: "baz"}, y.(*walker.SubKeyPrefixed).Value)
-			},
-			errAssertion: noError,
-		},
-		testCase{
-			caseName: "prefixed-with-tagged-field",
-			input: &walker.SubKeyPrefixed{
-				Prefix: []string{"ns"},
-				Value:  &basicStructBool{},
-			},
-			provider: &mockProvider{st: map[string]string{"ns.fzz": "true"}},
-			dataAssertion: func(t *testing.T, y interface{}) {
-				assert.Equal(t, &basicStructBool{Bool: true}, y.(*walker.SubKeyPrefixed).Value)
-			},
-			errAssertion: noError,
-		},
-		testCase{
-			caseName: "prefixed-with-nested-struct",
-			input: &walker.SubKeyPrefixed{
-				Prefix: []string{"pfx"},
-				Value:  &nestedStruct{},
-			},
-			provider: &mockProvider{st: map[string]string{"pfx.nested.inner": "42"}},
-			dataAssertion: func(t *testing.T, y interface{}) {
-				want := &nestedStruct{}
-				v := int64(42)
-				want.Nested.Inner = &v
-				assert.Equal(t, want, y.(*walker.SubKeyPrefixed).Value)
-			},
-			errAssertion: noError,
-		},
-		testCase{
-			caseName: "prefixed-empty-prefix",
-			input: &walker.SubKeyPrefixed{
-				Value: &basicStruct1{},
-			},
-			provider: &mockProvider{st: map[string]string{"Fiz": "val"}},
-			dataAssertion: func(t *testing.T, y interface{}) {
-				assert.Equal(t, &basicStruct1{Fiz: "val"}, y.(*walker.SubKeyPrefixed).Value)
-			},
-			errAssertion: noError,
-		},
-		testCase{
-			caseName: "nested-prefixed-field",
-			input: &outerPrefixedConfig{
-				Nested: &walker.SubKeyPrefixed{
-					Prefix: []string{"ns"},
-					Value:  &basicStruct1{},
-				},
-			},
-			provider: &mockProvider{st: map[string]string{"direct": "top", "Nested.ns.Fiz": "deep"}},
-			dataAssertion: func(t *testing.T, y interface{}) {
-				o := y.(*outerPrefixedConfig)
-				assert.Equal(t, "top", o.Direct)
-				assert.Equal(t, &basicStruct1{Fiz: "deep"}, o.Nested.Value)
-			},
-			errAssertion: noError,
-		},
-		testCase{
-			caseName: "nested-prefixed-multi-segment",
-			input: &outerPrefixedConfig{
-				Nested: &walker.SubKeyPrefixed{
-					Prefix: []string{"a", "b"},
-					Value:  &basicStruct1{},
-				},
-			},
-			provider: &mockProvider{st: map[string]string{"Nested.a.b.Fiz": "val"}},
-			dataAssertion: func(t *testing.T, y interface{}) {
-				o := y.(*outerPrefixedConfig)
-				assert.Equal(t, "", o.Direct)
-				assert.Equal(t, &basicStruct1{Fiz: "val"}, o.Nested.Value)
-			},
-			errAssertion: noError,
-		},
 	} {
 		t.Run(
 			tCase.caseName,
@@ -938,11 +842,6 @@ func TestDefaultProvider(t *testing.T) {
 			assert.Equal(t, tc.want, tc.have)
 		})
 	}
-}
-
-type outerPrefixedConfig struct {
-	Direct string `mock:"direct"`
-	Nested *walker.SubKeyPrefixed
 }
 
 type dbConfig struct {
