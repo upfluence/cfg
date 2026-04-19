@@ -27,42 +27,43 @@ func testCommandContext(buf *bytes.Buffer) cli.CommandContext {
 }
 
 func TestNewPrinter(t *testing.T) {
+	extFn := func(r testRow, col string) string {
+		switch col {
+		case "NAME":
+			return r.Name
+		case "AGE":
+			return fmt.Sprintf("%d", r.Age)
+		case "CITY":
+			return r.City
+		default:
+			return ""
+		}
+	}
+
 	for _, tc := range []struct {
 		name      string
+		haveKey   string
+		haveFF    FormatterFunc
 		haveRows  []testRow
 		haveCols  []string
 		haveExtFn func(testRow, string) string
 		want      string
 	}{
 		{
-			name:     "single row",
-			haveCols: []string{"NAME", "AGE"},
-			haveExtFn: func(r testRow, col string) string {
-				switch col {
-				case "NAME":
-					return r.Name
-				case "AGE":
-					return fmt.Sprintf("%d", r.Age)
-				default:
-					return ""
-				}
-			},
-			haveRows: []testRow{{Name: "alice", Age: 30}},
-			want:     "NAME   AGE\nalice  30\n",
+			name:      "table/single row",
+			haveKey:   "table",
+			haveFF:    NewTabwriterFormatter,
+			haveCols:  []string{"NAME", "AGE"},
+			haveExtFn: extFn,
+			haveRows:  []testRow{{Name: "alice", Age: 30}},
+			want:      "NAME   AGE\nalice  30\n",
 		},
 		{
-			name:     "multiple rows",
-			haveCols: []string{"NAME", "CITY"},
-			haveExtFn: func(r testRow, col string) string {
-				switch col {
-				case "NAME":
-					return r.Name
-				case "CITY":
-					return r.City
-				default:
-					return ""
-				}
-			},
+			name:      "table/multiple rows",
+			haveKey:   "table",
+			haveFF:    NewTabwriterFormatter,
+			haveCols:  []string{"NAME", "CITY"},
+			haveExtFn: extFn,
 			haveRows: []testRow{
 				{Name: "alice", City: "paris"},
 				{Name: "bob", City: "london"},
@@ -70,7 +71,39 @@ func TestNewPrinter(t *testing.T) {
 			want: "NAME   CITY\nalice  paris\nbob    london\n",
 		},
 		{
-			name:      "empty slice",
+			name:      "table/empty slice",
+			haveKey:   "table",
+			haveFF:    NewTabwriterFormatter,
+			haveCols:  []string{"NAME"},
+			haveExtFn: func(_ testRow, _ string) string { return "" },
+			haveRows:  []testRow{},
+			want:      "NAME\n",
+		},
+		{
+			name:      "csv/single row",
+			haveKey:   "csv",
+			haveFF:    NewCSVFormatter,
+			haveCols:  []string{"NAME", "AGE"},
+			haveExtFn: extFn,
+			haveRows:  []testRow{{Name: "alice", Age: 30}},
+			want:      "NAME,AGE\nalice,30\n",
+		},
+		{
+			name:      "csv/multiple rows",
+			haveKey:   "csv",
+			haveFF:    NewCSVFormatter,
+			haveCols:  []string{"NAME", "CITY"},
+			haveExtFn: extFn,
+			haveRows: []testRow{
+				{Name: "alice", City: "paris"},
+				{Name: "bob", City: "london"},
+			},
+			want: "NAME,CITY\nalice,paris\nbob,london\n",
+		},
+		{
+			name:      "csv/empty slice",
+			haveKey:   "csv",
+			haveFF:    NewCSVFormatter,
 			haveCols:  []string{"NAME"},
 			haveExtFn: func(_ testRow, _ string) string { return "" },
 			haveRows:  []testRow{},
@@ -78,9 +111,9 @@ func TestNewPrinter(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			p := NewPrinter[testRow](tc.haveCols, tc.haveExtFn)
+			p := NewPrinter[testRow](tc.haveKey, tc.haveFF, tc.haveCols, tc.haveExtFn)
 
-			assert.Equal(t, "table", p.Key())
+			assert.Equal(t, tc.haveKey, p.Key())
 
 			var buf bytes.Buffer
 
@@ -95,16 +128,22 @@ func TestNewPrinter(t *testing.T) {
 func TestNewDefaultPrinter(t *testing.T) {
 	for _, tc := range []struct {
 		name     string
+		haveKey  string
+		haveFF   FormatterFunc
 		haveRows []testRow
 		want     string
 	}{
 		{
-			name:     "single row",
+			name:     "table/single row",
+			haveKey:  "table",
+			haveFF:   NewTabwriterFormatter,
 			haveRows: []testRow{{Name: "alice", Age: 30, City: "paris"}},
 			want:     "Name   Age  City\nalice  30   paris\n",
 		},
 		{
-			name: "multiple rows",
+			name:    "table/multiple rows",
+			haveKey: "table",
+			haveFF:  NewTabwriterFormatter,
 			haveRows: []testRow{
 				{Name: "alice", Age: 30, City: "paris"},
 				{Name: "bob", Age: 25, City: "london"},
@@ -112,15 +151,41 @@ func TestNewDefaultPrinter(t *testing.T) {
 			want: "Name   Age  City\nalice  30   paris\nbob    25   london\n",
 		},
 		{
-			name:     "empty slice",
+			name:     "table/empty slice",
+			haveKey:  "table",
+			haveFF:   NewTabwriterFormatter,
 			haveRows: []testRow{},
 			want:     "Name  Age  City\n",
 		},
+		{
+			name:     "csv/single row",
+			haveKey:  "csv",
+			haveFF:   NewCSVFormatter,
+			haveRows: []testRow{{Name: "alice", Age: 30, City: "paris"}},
+			want:     "Name,Age,City\nalice,30,paris\n",
+		},
+		{
+			name:    "csv/multiple rows",
+			haveKey: "csv",
+			haveFF:  NewCSVFormatter,
+			haveRows: []testRow{
+				{Name: "alice", Age: 30, City: "paris"},
+				{Name: "bob", Age: 25, City: "london"},
+			},
+			want: "Name,Age,City\nalice,30,paris\nbob,25,london\n",
+		},
+		{
+			name:     "csv/empty slice",
+			haveKey:  "csv",
+			haveFF:   NewCSVFormatter,
+			haveRows: []testRow{},
+			want:     "Name,Age,City\n",
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			p := NewDefaultPrinter[testRow]()
+			p := NewDefaultPrinter[testRow](tc.haveKey, tc.haveFF)
 
-			assert.Equal(t, "table", p.Key())
+			assert.Equal(t, tc.haveKey, p.Key())
 
 			var buf bytes.Buffer
 
@@ -142,17 +207,45 @@ type nestedRow struct {
 }
 
 func TestNewDefaultPrinterNested(t *testing.T) {
-	p := NewDefaultPrinter[nestedRow]()
+	for _, tc := range []struct {
+		name     string
+		haveKey  string
+		haveFF   FormatterFunc
+		haveRows []nestedRow
+		want     string
+	}{
+		{
+			name:    "table",
+			haveKey: "table",
+			haveFF:  NewTabwriterFormatter,
+			haveRows: []nestedRow{
+				{ID: 1, Inner: nestedInner{Value: "foo"}},
+				{ID: 2, Inner: nestedInner{Value: "bar"}},
+			},
+			want: "ID  Inner.Value\n1   foo\n2   bar\n",
+		},
+		{
+			name:    "csv",
+			haveKey: "csv",
+			haveFF:  NewCSVFormatter,
+			haveRows: []nestedRow{
+				{ID: 1, Inner: nestedInner{Value: "foo"}},
+				{ID: 2, Inner: nestedInner{Value: "bar"}},
+			},
+			want: "ID,Inner.Value\n1,foo\n2,bar\n",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			p := NewDefaultPrinter[nestedRow](tc.haveKey, tc.haveFF)
 
-	var buf bytes.Buffer
+			var buf bytes.Buffer
 
-	err := p.Print(context.Background(), testCommandContext(&buf), []nestedRow{
-		{ID: 1, Inner: nestedInner{Value: "foo"}},
-		{ID: 2, Inner: nestedInner{Value: "bar"}},
-	})
+			err := p.Print(context.Background(), testCommandContext(&buf), tc.haveRows)
 
-	require.NoError(t, err)
-	assert.Equal(t, "ID  Inner.Value\n1   foo\n2   bar\n", buf.String())
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, buf.String())
+		})
+	}
 }
 
 type taggedRow struct {
@@ -162,7 +255,7 @@ type taggedRow struct {
 }
 
 func TestNewDefaultPrinterWithTableTags(t *testing.T) {
-	p := NewDefaultPrinter[taggedRow]()
+	p := NewDefaultPrinter[taggedRow]("table", NewTabwriterFormatter)
 
 	var buf bytes.Buffer
 
@@ -172,4 +265,23 @@ func TestNewDefaultPrinterWithTableTags(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, "name   email\nalice  alice@example.com\n", buf.String())
+}
+
+type csvTaggedRow struct {
+	Name  string `csv:"name"`
+	Email string `csv:"email"`
+	Age   int    `csv:"-"`
+}
+
+func TestNewDefaultPrinterWithCSVTags(t *testing.T) {
+	p := NewDefaultPrinter[csvTaggedRow]("csv", NewCSVFormatter)
+
+	var buf bytes.Buffer
+
+	err := p.Print(context.Background(), testCommandContext(&buf), []csvTaggedRow{
+		{Name: "alice", Email: "alice@example.com", Age: 30},
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, "name,email\nalice,alice@example.com\n", buf.String())
 }
