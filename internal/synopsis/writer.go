@@ -3,9 +3,7 @@ package synopsis
 import (
 	"bytes"
 	"io"
-	"reflect"
 
-	"github.com/upfluence/cfg/internal/reflectutil"
 	"github.com/upfluence/cfg/internal/setter"
 	"github.com/upfluence/cfg/internal/walker"
 	"github.com/upfluence/cfg/provider"
@@ -82,25 +80,10 @@ func (w *Writer) writeKeys(b *bytes.Buffer, fks []string) {
 }
 
 func (w *Writer) writeSubKeyField(b *bytes.Buffer, f *walker.Field) error {
-	var (
-		placeholder string
-		structType  reflect.Type
-	)
+	prefixed := walker.BuildSubKeyField(f)
 
-	if st := reflectutil.SubKeyMapElem(f.Field.Type); st != nil {
-		placeholder = "<key>"
-		structType = st
-	} else if st := reflectutil.SubKeySliceElem(f.Field.Type); st != nil {
-		placeholder = "<N>"
-		structType = st
-	} else {
+	if prefixed == nil {
 		return nil
-	}
-
-	prefixed := &walker.SubKeyPrefixed{
-		Ancestor: f,
-		SubKey:   placeholder,
-		Value:    reflect.New(structType).Interface(),
 	}
 
 	return walker.Walk(prefixed, w.buildWriteFn(b))
