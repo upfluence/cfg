@@ -19,7 +19,12 @@ type App struct {
 
 	name string
 	args []string
-	cmd  Command
+
+	stdin  io.Reader
+	stdout io.Writer
+	stderr io.Writer
+
+	cmd Command
 }
 
 func NewApp(opts ...Option) *App {
@@ -33,6 +38,9 @@ func NewApp(opts ...Option) *App {
 		ps:      o.ps,
 		name:    o.name,
 		args:    o.args,
+		stdin:   o.stdin,
+		stdout:  o.stdout,
+		stderr:  o.stderr,
 		opts:    o.opts,
 		newFunc: o.newFunc,
 		cmd:     o.command(),
@@ -106,7 +114,7 @@ func (a *App) commandContext() CommandContext {
 	)
 
 	return newCommandContext(
-		a.name,
+		a,
 		cmds,
 		args,
 		a.newFunc(append(a.opts, cfg.WithProviders(ps...))...),
