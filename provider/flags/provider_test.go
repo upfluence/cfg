@@ -1,9 +1,12 @@
 package flags
 
 import (
+	"context"
+	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestParseFlags(t *testing.T) {
@@ -121,6 +124,63 @@ func TestKebabCase(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			assert.Equal(t, tc.want, kebabCase(tc.haveInput))
+		})
+	}
+}
+
+func TestProvider_SubKeys(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		haveArgs []string
+		haveKey  string
+		want     []string
+	}{
+		{
+			name:    "no matching flags",
+			haveKey: "workers",
+			want:    []string{},
+		},
+		{
+			name:     "single sub-key",
+			haveArgs: []string{"--workers.0.host", "h0"},
+			haveKey:  "workers",
+			want:     []string{"0"},
+		},
+		{
+			name: "multiple sub-keys",
+			haveArgs: []string{
+				"--workers.0.host", "h0",
+				"--workers.0.port", "80",
+				"--workers.1.host", "h1",
+			},
+			haveKey: "workers",
+			want:    []string{"0", "1"},
+		},
+		{
+			name: "preserves original key casing",
+			haveArgs: []string{
+				"--Workers.PRIMARY.Host", "h1",
+			},
+			haveKey: "Workers",
+			want:    []string{"PRIMARY"},
+		},
+		{
+			name:     "ignores exact prefix without sub-segment",
+			haveArgs: []string{"--workers=true"},
+			haveKey:  "workers",
+			want:     []string{},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			p := NewProvider(tc.haveArgs)
+
+			got, err := p.SubKeys(context.Background(), tc.haveKey)
+
+			require.NoError(t, err)
+
+			sort.Strings(got)
+			sort.Strings(tc.want)
+			assert.Equal(t, tc.want, got)
 		})
 	}
 }
