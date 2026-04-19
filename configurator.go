@@ -3,6 +3,7 @@ package cfg
 import (
 	"context"
 	"os"
+	"reflect"
 
 	"github.com/upfluence/errors"
 
@@ -26,6 +27,8 @@ type Option func(*configurator)
 
 func IgnoreMissingTag(c *configurator) { c.ignoreMissingTag = true }
 
+func HonorRequired(c *configurator) { c.honorRequired = true }
+
 func WithProviders(ps ...provider.Provider) Option {
 	return func(c *configurator) { c.providers = append(c.providers, ps...) }
 }
@@ -40,11 +43,13 @@ type configurator struct {
 	providers        []provider.Provider
 	factory          setter.Factory
 	ignoreMissingTag bool
+	honorRequired    bool
 }
 
 func NewDefaultConfigurator(providers ...provider.Provider) Configurator {
 	cfg := newConfigurator(
 		[]Option{
+			HonorRequired,
 			WithProviders(
 				append(
 					append([]provider.Provider{dflt.Provider{}}, providers...),
@@ -110,6 +115,8 @@ func (c *configurator) walkFunc(ctx context.Context, f *walker.Field) error {
 		return nil
 	}
 
+	var set bool
+
 	for _, p := range c.providers {
 		var (
 			v   string
@@ -144,6 +151,8 @@ func (c *configurator) walkFunc(ctx context.Context, f *walker.Field) error {
 			continue
 		}
 
+		set = true
+
 		if err := s.Set(
 			v,
 			reflectutil.IndirectedValue(f.Value).FieldByName(f.Field.Name),
@@ -160,9 +169,25 @@ func (c *configurator) walkFunc(ctx context.Context, f *walker.Field) error {
 		}
 	}
 
+	if !set && c.honorRequired && isRequired(f.Field) {
+		return &RequiredError{Field: f.Field}
+	}
+
 	if setter.IsUnmarshaler(f.Value.Type()) {
 		return walker.SkipStruct
 	}
 
 	return nil
+}
+
+func isRequired(f reflect.StructField) bool {
+	v, ok := f.Tag.Lookup("required")
+
+	if !ok {
+		return false
+	}
+
+	b, err := setter.ParseBool(v)
+
+	return err == nil && b
 }

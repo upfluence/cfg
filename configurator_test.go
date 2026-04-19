@@ -15,6 +15,7 @@ import (
 
 	"github.com/upfluence/cfg/internal/walker"
 	"github.com/upfluence/cfg/provider"
+	dflt "github.com/upfluence/cfg/provider/default"
 )
 
 var (
@@ -671,6 +672,72 @@ func TestDefaultProvider(t *testing.T) {
 
 			require.NoError(t, err)
 			assert.Equal(t, tc.want, tc.have)
+		})
+	}
+}
+
+func TestHonorRequired(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		have    interface{}
+		opts    []Option
+		wantErr bool
+	}{
+		{
+			name: "required field provided",
+			have: &struct {
+				Foo string `env:"FOO" required:"true"`
+			}{},
+			opts:    []Option{WithProviders(provider.NewStaticProvider("env", map[string]string{"FOO": "bar"}, nil))},
+			wantErr: false,
+		},
+		{
+			name: "required field missing",
+			have: &struct {
+				Foo string `env:"FOO" required:"true"`
+			}{},
+			opts:    []Option{},
+			wantErr: true,
+		},
+		{
+			name: "non-required field missing",
+			have: &struct {
+				Foo string `env:"FOO"`
+			}{},
+			opts:    []Option{},
+			wantErr: false,
+		},
+		{
+			name: "required false field missing",
+			have: &struct {
+				Foo string `env:"FOO" required:"false"`
+			}{},
+			opts:    []Option{},
+			wantErr: false,
+		},
+		{
+			name: "required field satisfied by default tag",
+			have: &struct {
+				Foo string `default:"bar" required:"true"`
+			}{},
+			opts:    []Option{WithProviders(dflt.Provider{})},
+			wantErr: false,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			c := NewConfiguratorWithOptions(
+				append(tc.opts, HonorRequired)...,
+			)
+
+			err := c.Populate(context.Background(), tc.have)
+
+			if tc.wantErr {
+				var re *RequiredError
+
+				require.ErrorAs(t, err, &re)
+			} else {
+				require.NoError(t, err)
+			}
 		})
 	}
 }
