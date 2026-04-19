@@ -742,6 +742,133 @@ func TestHonorRequired(t *testing.T) {
 	}
 }
 
+type prefixedConfig struct {
+	prefix []string
+	value  any
+}
+
+func (p *prefixedConfig) WalkPrefix() []string { return p.prefix }
+func (p *prefixedConfig) WalkValue() any       { return p.value }
+
+type outerPrefixedConfig struct {
+	Direct string `mock:"direct"`
+	Nested *prefixedConfig
+}
+
+func TestPrefixedPopulate(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		have     any
+		provider provider.Provider
+		want     any
+	}{
+		{
+			name: "single segment prefix",
+			have: &prefixedConfig{
+				prefix: []string{"ns"},
+				value:  &basicStruct1{},
+			},
+			provider: &mockProvider{st: map[string]string{"ns.Fiz": "bar"}},
+			want:     &basicStruct1{Fiz: "bar"},
+		},
+		{
+			name: "multi segment prefix",
+			have: &prefixedConfig{
+				prefix: []string{"foo", "bar"},
+				value:  &basicStruct1{},
+			},
+			provider: &mockProvider{st: map[string]string{"foo.bar.Fiz": "baz"}},
+			want:     &basicStruct1{Fiz: "baz"},
+		},
+		{
+			name: "prefix with tagged field",
+			have: &prefixedConfig{
+				prefix: []string{"ns"},
+				value:  &basicStructBool{},
+			},
+			provider: &mockProvider{st: map[string]string{"ns.fzz": "true"}},
+			want:     &basicStructBool{Bool: true},
+		},
+		{
+			name: "prefix with nested struct",
+			have: &prefixedConfig{
+				prefix: []string{"pfx"},
+				value:  &nestedStruct{},
+			},
+			provider: &mockProvider{st: map[string]string{"pfx.nested.inner": "42"}},
+			want: func() *nestedStruct {
+				var v int64 = 42
+				ns := &nestedStruct{}
+				ns.Nested.Inner = &v
+				return ns
+			}(),
+		},
+		{
+			name: "empty prefix behaves like normal populate",
+			have: &prefixedConfig{
+				prefix: nil,
+				value:  &basicStruct1{},
+			},
+			provider: &mockProvider{st: map[string]string{"Fiz": "val"}},
+			want:     &basicStruct1{Fiz: "val"},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			c := NewConfiguratorWithOptions(WithProviders(tc.provider))
+
+			err := c.Populate(context.Background(), tc.have)
+
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, tc.have.(*prefixedConfig).value)
+		})
+	}
+}
+
+func TestNestedPrefixedPopulate(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		have      *outerPrefixedConfig
+		provider  provider.Provider
+		wantOuter string
+		wantInner *basicStruct1
+	}{
+		{
+			name: "nested prefixed field",
+			have: &outerPrefixedConfig{
+				Nested: &prefixedConfig{
+					prefix: []string{"ns"},
+					value:  &basicStruct1{},
+				},
+			},
+			provider:  &mockProvider{st: map[string]string{"direct": "top", "Nested.ns.Fiz": "deep"}},
+			wantOuter: "top",
+			wantInner: &basicStruct1{Fiz: "deep"},
+		},
+		{
+			name: "nested prefixed with multi-segment prefix",
+			have: &outerPrefixedConfig{
+				Nested: &prefixedConfig{
+					prefix: []string{"a", "b"},
+					value:  &basicStruct1{},
+				},
+			},
+			provider:  &mockProvider{st: map[string]string{"Nested.a.b.Fiz": "val"}},
+			wantOuter: "",
+			wantInner: &basicStruct1{Fiz: "val"},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			c := NewConfiguratorWithOptions(WithProviders(tc.provider))
+
+			err := c.Populate(context.Background(), tc.have)
+
+			require.NoError(t, err)
+			assert.Equal(t, tc.wantOuter, tc.have.Direct)
+			assert.Equal(t, tc.wantInner, tc.have.Nested.value)
+		})
+	}
+}
+
 func ExampleNewDefaultConfigurator() {
 	os.Setenv("FOO", "bar")
 	cfg := struct {

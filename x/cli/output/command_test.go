@@ -60,10 +60,10 @@ func TestRun(t *testing.T) {
 			wantErr: `Description:
 
 Usage:
-test-app [-o, --output] [--json-indent] [--foo, -f] [--bar, -b]
+test-app [-o, --output] [--output.json.indent] [--foo, -f] [--bar, -b]
 Arguments:
 - OutputFormat: string Output format (formats: [json yaml]) (default: yaml) (env: OUTPUTFORMAT, flag: -o, --output)
-- Indent: bool Indent JSON output (env: INDENT, flag: --json-indent)
+- output.json.Indent: bool Indent JSON output (env: OUTPUT_JSON_INDENT, flag: --output.json.indent)
 - Foo: string (env: FOO, flag: --foo, -f)
 - Bar: string (env: BAR, flag: --bar, -b) `,
 		},
@@ -81,10 +81,10 @@ Arguments:
 			wantErr: `Description:
 
 Usage:
-test-app [-o, --output] [--json-indent] [--foo, -f] [--bar, -b]
+test-app [-o, --output] [--output.json.indent] [--foo, -f] [--bar, -b]
 Arguments:
 - OutputFormat: string Output format (formats: [json]) (default: json) (env: OUTPUTFORMAT, flag: -o, --output)
-- Indent: bool Indent JSON output (env: INDENT, flag: --json-indent)
+- output.json.Indent: bool Indent JSON output (env: OUTPUT_JSON_INDENT, flag: --output.json.indent)
 - Foo: string (env: FOO, flag: --foo, -f)
 - Bar: string (env: BAR, flag: --bar, -b) `,
 		},
@@ -102,7 +102,7 @@ Arguments:
 		},
 		{
 			name:     "json format with indent",
-			haveArgs: []string{"--foo", "bar", "-o", "json", "--json-indent"},
+			haveArgs: []string{"--foo", "bar", "-o", "json", "--output.json.indent"},
 			haveCmd:  output.WrapDefaultCommand[testResult](defaultStaticCommand()),
 			wantOut:  "{\n  \"message\": \"ok\",\n  \"foo\": \"bar\"\n}\n",
 		},

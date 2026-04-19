@@ -15,7 +15,7 @@ const key = "json"
 var Printer printer.AnyPrinter = anyPrinter{}
 
 type config struct {
-	Indent bool `flag:"json-indent" help:"Indent JSON output"`
+	Indent bool `flag:"indent" help:"Indent JSON output"`
 }
 
 type anyPrinter struct{}
