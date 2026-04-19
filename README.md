@@ -226,6 +226,31 @@ variables, flags, or other providers takes precedence. It is included
 automatically in `NewDefaultConfigurator`. Nested structs work as expected:
 only fields with an explicit `default` tag receive a value.
 
+### Required Fields
+
+Use the `required` struct tag together with the `HonorRequired` option to
+enforce that a field receives a value from at least one provider:
+
+```go
+type Config struct {
+  APIKey string `env:"API_KEY" required:"true"`
+  Debug  bool   `env:"DEBUG"`
+}
+
+configurator := cfg.NewConfiguratorWithOptions(
+  cfg.WithProviders(env.NewDefaultProvider()),
+  cfg.HonorRequired,
+)
+
+// Returns a *cfg.RequiredError if API_KEY is not set
+err := configurator.Populate(ctx, &cfg)
+```
+
+The tag accepts any truthy value (`true`, `yes`, `y`, `1`, `t`).
+Fields that receive a value from any provider — including the `default` tag —
+satisfy the requirement. `HonorRequired` is turned on by default in
+`NewDefaultConfigurator`.
+
 ### Nested Structs
 
 ```go
