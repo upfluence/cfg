@@ -11,6 +11,7 @@ import (
 
 	"github.com/upfluence/errors"
 
+	"github.com/upfluence/cfg"
 	"github.com/upfluence/cfg/x/cli"
 	"github.com/upfluence/cfg/x/cli/output/printer"
 	"github.com/upfluence/cfg/x/cli/output/printer/json"
@@ -80,6 +81,30 @@ type outputConfig struct {
 	OutputFormat string `flag:"o,output" help:"Output format"`
 }
 
+type prefixedConfig struct {
+	prefix string
+	value  any
+}
+
+func (p *prefixedConfig) WalkPrefix() []string { return []string{"output", p.prefix} }
+func (p *prefixedConfig) WalkValue() any       { return p.value }
+
+type prefixedConfigurator struct {
+	inner  cfg.Configurator
+	prefix string
+}
+
+func (pc *prefixedConfigurator) Populate(ctx context.Context, in any) error {
+	return pc.inner.Populate(ctx, &prefixedConfig{prefix: pc.prefix, value: in}) //nolint:wrapcheck
+}
+
+func (pc *prefixedConfigurator) WithOptions(opts ...cfg.Option) cfg.Configurator {
+	return &prefixedConfigurator{
+		inner:  pc.inner.WithOptions(opts...),
+		prefix: pc.prefix,
+	}
+}
+
 type wrappedCommand[T any] struct {
 	cmd Command[T]
 
@@ -100,7 +125,14 @@ func (wc *wrappedCommand[T]) wrapIntrospectionOptions(opts cli.IntrospectionOpti
 	)
 
 	for _, p := range wc.printers {
-		opts.Definitions = append(opts.Definitions, p.CommandDefinition())
+		def := p.CommandDefinition()
+		key := p.Key()
+
+		for i, c := range def.Configs {
+			def.Configs[i] = &prefixedConfig{prefix: key, value: c}
+		}
+
+		opts.Definitions = append(opts.Definitions, def)
 	}
 
 	return opts
@@ -131,6 +163,11 @@ func (wc *wrappedCommand[T]) Run(ctx context.Context, cctx cli.CommandContext) e
 
 	if err != nil {
 		return err //nolint:wrapcheck
+	}
+
+	cctx.Configurator = &prefixedConfigurator{
+		inner:  cctx.Configurator,
+		prefix: oc.OutputFormat,
 	}
 
 	return printer.Print(ctx, cctx, v) //nolint:wrapcheck
