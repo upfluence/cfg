@@ -481,6 +481,16 @@ func (e *NotBoolValueError) Error() string {
 	return fmt.Sprintf("cfg: Can't parse %q in a bool value", e.value)
 }
 
+func ParseBool(value string) (bool, error) {
+	v, err := parseBool(value, false)
+
+	if err != nil {
+		return false, err
+	}
+
+	return v.(bool), nil
+}
+
 func parseBool(value string, ptr bool) (interface{}, error) {
 	var v bool
 

@@ -7,6 +7,18 @@ import (
 	"github.com/upfluence/cfg/provider"
 )
 
+type RequiredError struct {
+	Field reflect.StructField
+}
+
+func (re *RequiredError) Error() string {
+	return fmt.Sprintf(
+		"required field %s.%s has no value",
+		re.Field.Type.Name(),
+		re.Field.Name,
+	)
+}
+
 type ProvidingError struct {
 	Err error
 
