@@ -208,6 +208,24 @@ configurator := cfg.NewConfiguratorWithOptions(
 )
 ```
 
+### Default Values
+
+Use the `default` struct tag to provide fallback values when no other provider
+supplies one:
+
+```go
+type Config struct {
+  Host    string `env:"HOST" flag:"host" default:"localhost"`
+  Port    int    `env:"PORT" flag:"port" default:"8080"`
+  Verbose bool   `env:"VERBOSE"          default:"false"`
+}
+```
+
+The default provider has the lowest priority — any value from environment
+variables, flags, or other providers takes precedence. It is included
+automatically in `NewDefaultConfigurator`. Nested structs work as expected:
+only fields with an explicit `default` tag receive a value.
+
 ### Nested Structs
 
 ```go
