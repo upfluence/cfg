@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"reflect"
 	"slices"
 	"sort"
 	"strings"
@@ -25,6 +24,27 @@ type Command[T any] interface {
 	Run(context.Context, cli.CommandContext) (T, error)
 }
 
+type outputFormat struct {
+	keys     []string
+	selected string
+}
+
+func (of outputFormat) String() string { return of.selected }
+
+func (of *outputFormat) Parse(s string) error {
+	of.selected = s
+
+	return nil
+}
+
+func (of outputFormat) Help() string {
+	return fmt.Sprintf("Output format (formats: [%s])", strings.Join(of.keys, " "))
+}
+
+type outputConfig struct {
+	OutputFormat outputFormat `flag:"o,output"`
+}
+
 func WrapCommand[T any](cmd Command[T], defaultPrinter printer.Printer[T], additionalPrinters ...printer.Printer[T]) cli.Command {
 	printers := make(map[string]printer.Printer[T], 1+len(additionalPrinters))
 	printers[defaultPrinter.Key()] = defaultPrinter
@@ -33,15 +53,6 @@ func WrapCommand[T any](cmd Command[T], defaultPrinter printer.Printer[T], addit
 		printers[p.Key()] = p
 	}
 
-	return &wrappedCommand[T]{
-		cmd:                 cmd,
-		defaultOutputFormat: defaultPrinter.Key(),
-		printers:            printers,
-		outputConfigType:    buildOutputConfigType(printers),
-	}
-}
-
-func buildOutputConfigType[T any](printers map[string]printer.Printer[T]) reflect.Type {
 	keys := make([]string, 0, len(printers))
 
 	for k := range printers {
@@ -50,18 +61,16 @@ func buildOutputConfigType[T any](printers map[string]printer.Printer[T]) reflec
 
 	sort.Strings(keys)
 
-	helpTag := fmt.Sprintf(
-		"Output format (formats: [%s])",
-		strings.Join(keys, " "),
-	)
-
-	return reflect.StructOf([]reflect.StructField{
-		{
-			Name: "OutputFormat",
-			Type: reflect.TypeFor[string](),
-			Tag:  reflect.StructTag(fmt.Sprintf(`flag:"o,output" help:%q`, helpTag)),
+	return &wrappedCommand[T]{
+		cmd:      cmd,
+		printers: printers,
+		outputConfig: outputConfig{
+			OutputFormat: outputFormat{
+				keys:     keys,
+				selected: defaultPrinter.Key(),
+			},
 		},
-	})
+	}
 }
 
 func WrapDefaultCommand[T any](cmd Command[T], additionalPrinters ...printer.Printer[T]) cli.Command {
@@ -75,10 +84,6 @@ func WrapDefaultCommand[T any](cmd Command[T], additionalPrinters ...printer.Pri
 			additionalPrinters...,
 		)...,
 	)
-}
-
-type outputConfig struct {
-	OutputFormat string `flag:"o,output" help:"Output format"`
 }
 
 type prefixedConfig struct {
@@ -108,19 +113,15 @@ func (pc *prefixedConfigurator) WithOptions(opts ...cfg.Option) cfg.Configurator
 type wrappedCommand[T any] struct {
 	cmd Command[T]
 
-	defaultOutputFormat string
-	printers            map[string]printer.Printer[T]
-	outputConfigType    reflect.Type
+	outputConfig outputConfig
+	printers     map[string]printer.Printer[T]
 }
 
 func (wc *wrappedCommand[T]) wrapIntrospectionOptions(opts cli.IntrospectionOptions) cli.IntrospectionOptions {
-	oc := reflect.New(wc.outputConfigType)
-	oc.Elem().Field(0).SetString(wc.defaultOutputFormat)
-
 	opts.Definitions = append(
 		slices.Clone(opts.Definitions),
 		cli.CommandDefinition{
-			Configs: []any{oc.Interface()},
+			Configs: []any{&wc.outputConfig},
 		},
 	)
 
@@ -147,16 +148,21 @@ func (wc *wrappedCommand[T]) WriteHelp(w io.Writer, opts cli.IntrospectionOption
 }
 
 func (wc *wrappedCommand[T]) Run(ctx context.Context, cctx cli.CommandContext) error {
-	var oc = outputConfig{OutputFormat: wc.defaultOutputFormat}
+	var oc = outputConfig{
+		OutputFormat: outputFormat{
+			keys:     wc.outputConfig.OutputFormat.keys,
+			selected: wc.outputConfig.OutputFormat.selected,
+		},
+	}
 
 	if err := cctx.Configurator.Populate(ctx, &oc); err != nil {
 		return errors.Wrap(err, "populate output config")
 	}
 
-	printer, ok := wc.printers[oc.OutputFormat]
+	p, ok := wc.printers[oc.OutputFormat.selected]
 
 	if !ok {
-		return fmt.Errorf("unknown output format: %q", oc.OutputFormat)
+		return fmt.Errorf("unknown output format: %q", oc.OutputFormat.selected)
 	}
 
 	v, err := wc.cmd.Run(ctx, cctx)
@@ -167,8 +173,8 @@ func (wc *wrappedCommand[T]) Run(ctx context.Context, cctx cli.CommandContext) e
 
 	cctx.Configurator = &prefixedConfigurator{
 		inner:  cctx.Configurator,
-		prefix: oc.OutputFormat,
+		prefix: oc.OutputFormat.selected,
 	}
 
-	return printer.Print(ctx, cctx, v) //nolint:wrapcheck
+	return p.Print(ctx, cctx, v) //nolint:wrapcheck
 }

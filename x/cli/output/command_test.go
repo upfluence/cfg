@@ -62,7 +62,7 @@ func TestRun(t *testing.T) {
 Usage:
 test-app [-o, --output] [--output.json.indent] [--foo, -f] [--bar, -b]
 Arguments:
-- OutputFormat: string Output format (formats: [json yaml]) (default: yaml) (env: OUTPUTFORMAT, flag: -o, --output)
+- OutputFormat: output.outputFormat Output format (formats: [json yaml]) (default: yaml) (env: OUTPUTFORMAT, flag: -o, --output)
 - output.json.Indent: bool Indent JSON output (env: OUTPUT_JSON_INDENT, flag: --output.json.indent)
 - Foo: string (env: FOO, flag: --foo, -f)
 - Bar: string (env: BAR, flag: --bar, -b) `,
@@ -83,7 +83,7 @@ Arguments:
 Usage:
 test-app [-o, --output] [--output.json.indent] [--foo, -f] [--bar, -b]
 Arguments:
-- OutputFormat: string Output format (formats: [json]) (default: json) (env: OUTPUTFORMAT, flag: -o, --output)
+- OutputFormat: output.outputFormat Output format (formats: [json]) (default: json) (env: OUTPUTFORMAT, flag: -o, --output)
 - output.json.Indent: bool Indent JSON output (env: OUTPUT_JSON_INDENT, flag: --output.json.indent)
 - Foo: string (env: FOO, flag: --foo, -f)
 - Bar: string (env: BAR, flag: --bar, -b) `,
