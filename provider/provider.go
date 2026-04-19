@@ -57,11 +57,19 @@ func (sp *staticProvider) Provide(_ context.Context, k string) (string, bool, er
 // The standard provider joins them with "."; other providers may need a
 // different strategy (e.g. the default-value provider filters out empty
 // parts).
+//
+// SubKeys enumerates dynamic sub-keys under a given prefix.  This is
+// used by the configurator to populate map[string]Struct fields: for
+// each discovered sub-key a new struct value is allocated and
+// recursively walked with the sub-key injected as an ancestor prefix.
+// Providers that do not support key enumeration should return a nil
+// slice.
 type FullyQualifiedProvider interface {
 	Provider
 
 	DefaultFieldValue(fieldName string) string
 	JoinFieldKeys(prefix, key string) string
+	SubKeys(ctx context.Context, prefix string) ([]string, error)
 }
 
 // WrapFullyQualifiedProvider returns p as a FullyQualifiedProvider.  If
@@ -86,6 +94,10 @@ func (d *defaultFQProvider) DefaultFieldValue(fieldName string) string {
 
 func (d *defaultFQProvider) JoinFieldKeys(prefix, key string) string {
 	return prefix + "." + key
+}
+
+func (*defaultFQProvider) SubKeys(context.Context, string) ([]string, error) {
+	return nil, nil
 }
 
 // KeyFormatter is an optional interface that providers can implement to
