@@ -2,6 +2,7 @@ package walker
 
 import (
 	"reflect"
+	"slices"
 	"unicode"
 
 	"github.com/upfluence/errors"
@@ -19,16 +20,22 @@ type Field struct {
 	Ancestor *Field
 }
 
-type WalkFunc func(*Field) error
+// FieldPrefix returns the chain of field names from root to this field
+// (inclusive), suitable for use as prefix segments with the Prefixed
+// interface.
+func (f *Field) FieldPrefix() []string {
+	var segments []string
 
-// Prefixed is an optional interface that a value passed to Walk can
-// implement to inject dynamic key prefix segments.  When Walk receives a
-// Prefixed value it builds a synthetic ancestor chain from the prefix
-// segments and walks the inner value returned by WalkValue.
-type Prefixed interface {
-	WalkPrefix() []string
-	WalkValue() any
+	for cur := f; cur != nil; cur = cur.Ancestor {
+		segments = append(segments, cur.Field.Name)
+	}
+
+	slices.Reverse(segments)
+
+	return segments
 }
+
+type WalkFunc func(*Field) error
 
 func Walk(in any, fn WalkFunc) error {
 	return walkValue(in, fn, nil)
