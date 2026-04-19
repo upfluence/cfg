@@ -40,6 +40,22 @@ type dbConfig struct {
 	Port int    `default:"5432" env:"PORT" flag:"port"`
 }
 
+type helpString string
+
+func (h helpString) Help() string { return string(h) }
+
+type helperFieldConfig struct {
+	Dynamic helpString `flag:"dyn" env:"-"`
+}
+
+type helperOverridesTagConfig struct {
+	Dynamic helpString `flag:"dyn" env:"-" help:"from tag"`
+}
+
+type helperEmptyFallsBackConfig struct {
+	Dynamic helpString `flag:"dyn" env:"-" help:"from tag"`
+}
+
 func TestPrintDefaults(t *testing.T) {
 	for _, tt := range []struct {
 		name string
@@ -84,6 +100,24 @@ func TestPrintDefaults(t *testing.T) {
 			out: "Arguments:\n" +
 				"\t- DB.Host: string (default: localhost) (env: DB_HOST, flag: --db.host)\n" +
 				"\t- DB.Port: integer (default: 5432) (env: DB_PORT, flag: --db.port)\n",
+		},
+		{
+			name: "Help() method provides help text",
+			in:   &helperFieldConfig{Dynamic: "dynamic help"},
+			out: "Arguments:\n" +
+				"\t- Dynamic: string dynamic help (default: dynamic help) (flag: --dyn)\n",
+		},
+		{
+			name: "Help() method overrides struct tag",
+			in:   &helperOverridesTagConfig{Dynamic: "from method"},
+			out: "Arguments:\n" +
+				"\t- Dynamic: string from method (default: from method) (flag: --dyn)\n",
+		},
+		{
+			name: "empty Help() falls back to struct tag",
+			in:   &helperEmptyFallsBackConfig{},
+			out: "Arguments:\n" +
+				"\t- Dynamic: string from tag (flag: --dyn)\n",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
