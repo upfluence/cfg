@@ -31,18 +31,18 @@ type CommandContext struct {
 	wd  string
 }
 
-func newCommandContext(name string, cmds []string, args map[string]string, c cfg.Configurator) CommandContext {
+func newCommandContext(a *App, cmds []string, args map[string]string, c cfg.Configurator) CommandContext {
 	var wd, _ = os.Getwd()
 
 	return CommandContext{
 		Configurator: c,
 		Args:         cmds,
-		Stdin:        os.Stdin,
-		Stdout:       os.Stdout,
-		Stderr:       os.Stderr,
-		Logger:       newLogger(os.Stdout, os.Stderr, record.Notice),
+		Stdin:        a.stdin,
+		Stdout:       a.stdout,
+		Stderr:       a.stderr,
+		Logger:       newLogger(a.stdout, a.stderr, record.Notice),
 		args:         args,
-		appName:      name,
+		appName:      a.name,
 		wd:           wd,
 		env:          os.Environ(),
 	}
