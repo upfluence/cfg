@@ -8,27 +8,8 @@ on:
 
 jobs:
   test:
-    name: Run Tests
-    runs-on: ubuntu-20.04
-    strategy:
-      matrix:
-        go: [ '1.20.x', '1.19.x' ]
-    steps:
-      - name: Install Go ${{ matrix.go }}
-        uses: actions/setup-go@v2
-        with:
-          go-version: ${{ matrix.go }}
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Cache Modules
-        uses: actions/cache@v4
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-v1-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-      - name: Run tests
-        run: go test -v ./...
+    uses: upfluence/actions/.github/workflows/lib-go-test.yml@master
+    secrets: inherit
 
   release:
     needs: test
