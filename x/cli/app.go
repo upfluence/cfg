@@ -99,8 +99,9 @@ func (a *App) commandContext() CommandContext {
 		cmds, flags = a.parseArgs()
 		args        = make(map[string]string)
 		ps          = append(
-			[]provider.Provider{pflags.NewProvider(flags), argProvider(args)},
-			a.ps...,
+			a.ps,
+			pflags.NewProvider(flags),
+			argProvider(args),
 		)
 	)
 
