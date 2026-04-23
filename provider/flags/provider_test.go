@@ -117,7 +117,7 @@ func TestKebabCase(t *testing.T) {
 		{name: "multiple words", haveInput: "FooBarBaz", want: "foo-bar-baz"},
 		{name: "single char", haveInput: "F", want: "f"},
 		{name: "empty", haveInput: "", want: ""},
-		{name: "consecutive uppercase", haveInput: "HTTPServer", want: "h-t-t-p-server"},
+		{name: "consecutive uppercase", haveInput: "HTTPServer", want: "http-server"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			assert.Equal(t, tc.want, kebabCase(tc.haveInput))

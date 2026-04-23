@@ -97,7 +97,9 @@ func kebabCase(s string) string {
 	for i, r := range s {
 		if unicode.IsUpper(r) {
 			if i > 0 {
-				b.WriteByte('-')
+				if unicode.IsLower(rune(s[i-1])) || (len(s) > i+1 && unicode.IsLower(rune(s[i+1]))) {
+					b.WriteByte('-')
+				}
 			}
 
 			b.WriteRune(unicode.ToLower(r))
