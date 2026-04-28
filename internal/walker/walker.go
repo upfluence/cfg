@@ -21,7 +21,39 @@ type Field struct {
 
 type WalkFunc func(*Field) error
 
-func Walk(in interface{}, fn WalkFunc) error {
+// Prefixed is an optional interface that a value passed to Walk can
+// implement to inject dynamic key prefix segments.  When Walk receives a
+// Prefixed value it builds a synthetic ancestor chain from the prefix
+// segments and walks the inner value returned by WalkValue.
+type Prefixed interface {
+	WalkPrefix() []string
+	WalkValue() any
+}
+
+func Walk(in any, fn WalkFunc) error {
+	return walkValue(in, fn, nil)
+}
+
+func walkValue(in any, fn WalkFunc, ancestor *Field) error {
+	if p, ok := in.(Prefixed); ok {
+		return walkPrefixed(p, fn, ancestor)
+	}
+
+	return walkStruct(in, fn, ancestor)
+}
+
+func walkPrefixed(p Prefixed, fn WalkFunc, ancestor *Field) error {
+	for _, seg := range p.WalkPrefix() {
+		ancestor = &Field{
+			Field:    reflect.StructField{Name: seg},
+			Ancestor: ancestor,
+		}
+	}
+
+	return walkValue(p.WalkValue(), fn, ancestor)
+}
+
+func walkStruct(in any, fn WalkFunc, ancestor *Field) error {
 	if in == nil {
 		return ErrShouldBeAStructPtr
 	}
@@ -40,7 +72,7 @@ func Walk(in interface{}, fn WalkFunc) error {
 		return ErrShouldBeAStructPtr
 	}
 
-	return walk(inv, fn, nil)
+	return walk(inv, fn, ancestor)
 }
 
 func indirectedType(t reflect.Type) reflect.Type {
@@ -65,6 +97,16 @@ func addressValue(v reflect.Value) reflect.Value {
 	}
 
 	return v.Addr()
+}
+
+func walkField(nv reflect.Value, fn WalkFunc, f *Field) error {
+	if nv.CanInterface() {
+		if p, ok := nv.Interface().(Prefixed); ok {
+			return walkPrefixed(p, fn, f)
+		}
+	}
+
+	return walk(nv, fn, f)
 }
 
 func walk(v reflect.Value, fn WalkFunc, a *Field) error {
@@ -106,7 +148,7 @@ func walk(v reflect.Value, fn WalkFunc, a *Field) error {
 			nv.Set(reflect.New(sf.Type.Elem()))
 		}
 
-		if err := walk(nv, fn, &f); err != nil {
+		if err := walkField(nv, fn, &f); err != nil {
 			return err
 		}
 
