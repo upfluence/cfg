@@ -7,6 +7,8 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/upfluence/errors"
+
 	"github.com/upfluence/cfg/internal/reflectutil"
 	"github.com/upfluence/cfg/internal/setter"
 	"github.com/upfluence/cfg/internal/walker"
@@ -64,7 +66,7 @@ type Writer struct {
 func (w *Writer) writeConfig(out io.Writer, in interface{}) (int, error) {
 	var n int
 
-	return n, walker.Walk(in, w.buildWalkFn(out, &n, true))
+	return n, errors.Wrap(walker.Walk(in, w.buildWalkFn(out, &n, true)), "walk")
 }
 
 func (w *Writer) buildWalkFn(out io.Writer, n *int, includeDefaults bool) walker.WalkFunc {
@@ -137,7 +139,7 @@ func (w *Writer) buildWalkFn(out io.Writer, n *int, includeDefaults bool) walker
 
 		*n += int(nn)
 
-		return err
+		return errors.Wrap(err, "write")
 	}
 }
 
@@ -148,7 +150,7 @@ func (w *Writer) writeSubKeyField(out io.Writer, n *int, f *walker.Field) error 
 		return nil
 	}
 
-	return walker.Walk(prefixed, w.buildWalkFn(out, n, false))
+	return errors.Wrap(walker.Walk(prefixed, w.buildWalkFn(out, n, false)), "walk")
 }
 
 func fieldDefault(f *walker.Field) string {

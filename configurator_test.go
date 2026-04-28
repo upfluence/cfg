@@ -640,7 +640,7 @@ func TestConfigurator(t *testing.T) {
 		},
 
 		// SubKeys: map[string]Struct
-		testCase{
+		{
 			caseName: "subkeys-map-of-structs",
 			input:    &mapStructConfig{},
 			provider: &mockProvider{st: map[string]string{
@@ -657,7 +657,7 @@ func TestConfigurator(t *testing.T) {
 			}),
 			errAssertion: noError,
 		},
-		testCase{
+		{
 			caseName: "subkeys-map-of-ptr-structs",
 			input:    &mapPtrStructConfig{},
 			provider: &mockProvider{st: map[string]string{
@@ -674,14 +674,14 @@ func TestConfigurator(t *testing.T) {
 			}),
 			errAssertion: noError,
 		},
-		testCase{
+		{
 			caseName:      "subkeys-map-no-keys",
 			input:         &mapStructConfig{},
 			provider:      &mockProvider{st: map[string]string{}},
 			dataAssertion: deepEqual(&mapStructConfig{}),
 			errAssertion:  noError,
 		},
-		testCase{
+		{
 			caseName: "subkeys-map-union",
 			input:    &mapStructConfig{},
 			provider: &mockProvider{st: map[string]string{
@@ -702,7 +702,7 @@ func TestConfigurator(t *testing.T) {
 		},
 
 		// SubKeys: []Struct
-		testCase{
+		{
 			caseName: "subkeys-slice-of-structs",
 			input:    &sliceStructConfig{},
 			provider: &mockProvider{st: map[string]string{
@@ -719,7 +719,7 @@ func TestConfigurator(t *testing.T) {
 			}),
 			errAssertion: noError,
 		},
-		testCase{
+		{
 			caseName: "subkeys-slice-of-ptr-structs",
 			input:    &slicePtrStructConfig{},
 			provider: &mockProvider{st: map[string]string{
@@ -736,7 +736,7 @@ func TestConfigurator(t *testing.T) {
 			}),
 			errAssertion: noError,
 		},
-		testCase{
+		{
 			caseName: "subkeys-slice-filters-non-numeric",
 			input:    &sliceStructConfig{},
 			provider: &mockProvider{st: map[string]string{
@@ -750,7 +750,7 @@ func TestConfigurator(t *testing.T) {
 			}),
 			errAssertion: noError,
 		},
-		testCase{
+		{
 			caseName: "subkeys-slice-sorts-by-index",
 			input:    &sliceStructConfig{},
 			provider: &mockProvider{st: map[string]string{
@@ -767,7 +767,7 @@ func TestConfigurator(t *testing.T) {
 			}),
 			errAssertion: noError,
 		},
-		testCase{
+		{
 			caseName:      "subkeys-slice-no-keys",
 			input:         &sliceStructConfig{},
 			provider:      &mockProvider{st: map[string]string{}},

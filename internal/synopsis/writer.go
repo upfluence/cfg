@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"io"
 
+	"github.com/upfluence/errors"
+
 	"github.com/upfluence/cfg/internal/setter"
 	"github.com/upfluence/cfg/internal/walker"
 	"github.com/upfluence/cfg/provider"
@@ -27,10 +29,12 @@ func (w *Writer) Write(out io.Writer, in interface{}) (int, error) {
 	writeFn := w.buildWriteFn(&b)
 
 	if err := walker.Walk(in, writeFn); err != nil {
-		return 0, err
+		return 0, errors.Wrap(err, "walk")
 	}
 
-	return out.Write(b.Bytes())
+	n, err := out.Write(b.Bytes())
+
+	return n, errors.Wrap(err, "write")
 }
 
 func (w *Writer) buildWriteFn(b *bytes.Buffer) walker.WalkFunc {
@@ -86,5 +90,5 @@ func (w *Writer) writeSubKeyField(b *bytes.Buffer, f *walker.Field) error {
 		return nil
 	}
 
-	return walker.Walk(prefixed, w.buildWriteFn(b))
+	return errors.Wrap(walker.Walk(prefixed, w.buildWriteFn(b)), "walk")
 }

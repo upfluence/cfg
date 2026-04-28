@@ -90,17 +90,17 @@ func (p *Provider) SubKeys(_ context.Context, prefix string) ([]string, error) {
 	return keys, nil
 }
 
-func (p *Provider) navigateTo(prefix string) map[string]interface{} {
+func (p *Provider) navigateTo(prefix string) map[string]any {
 	cur := p.store
 
-	for _, k := range strings.Split(prefix, ".") {
+	for k := range strings.SplitSeq(prefix, ".") {
 		t := cur[k]
 
 		if t == nil {
 			return nil
 		}
 
-		next, ok := t.(map[string]interface{})
+		next, ok := t.(map[string]any)
 
 		if !ok {
 			return nil
