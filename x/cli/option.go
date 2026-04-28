@@ -5,6 +5,7 @@ import (
 
 	"github.com/upfluence/cfg"
 	"github.com/upfluence/cfg/provider"
+	dflt "github.com/upfluence/cfg/provider/default"
 	"github.com/upfluence/cfg/provider/env"
 )
 
@@ -45,7 +46,7 @@ func defaultOptions() *options {
 		name:    os.Args[0],
 		args:    os.Args[1:],
 		version: Version,
-		ps:      []provider.Provider{env.NewDefaultProvider()},
+		ps:      []provider.Provider{dflt.Provider{}, env.NewDefaultProvider()},
 		newFunc: cfg.NewConfiguratorWithOptions,
 	}
 }
