@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -40,6 +42,38 @@ func (p *mockProvider) Provide(_ context.Context, k string) (string, bool, error
 	v, ok := p.st[k]
 
 	return v, ok, nil
+}
+
+func (p *mockProvider) DefaultFieldValue(fieldName string) string {
+	return fieldName
+}
+
+func (p *mockProvider) JoinFieldKeys(prefix, key string) string {
+	return prefix + "." + key
+}
+
+func (p *mockProvider) SubKeys(_ context.Context, prefix string) ([]string, error) {
+	pfx := prefix + "."
+	seen := make(map[string]struct{})
+
+	var keys []string
+
+	for k := range p.st {
+		if !strings.HasPrefix(k, pfx) {
+			continue
+		}
+
+		seg, _, _ := strings.Cut(k[len(pfx):], ".")
+
+		if _, dup := seen[seg]; dup {
+			continue
+		}
+
+		seen[seg] = struct{}{}
+		keys = append(keys, seg)
+	}
+
+	return keys, nil
 }
 
 type testCase struct {
@@ -604,6 +638,142 @@ func TestConfigurator(t *testing.T) {
 			errAssertion:  hasStaticError(walker.ErrShouldBeAStructPtr),
 			dataAssertion: func(t *testing.T, y interface{}) {},
 		},
+
+		// SubKeys: map[string]Struct
+		{
+			caseName: "subkeys-map-of-structs",
+			input:    &mapStructConfig{},
+			provider: &mockProvider{st: map[string]string{
+				"Databases.PRIMARY.Host": "h1",
+				"Databases.PRIMARY.Port": "5432",
+				"Databases.REPLICA.Host": "h2",
+				"Databases.REPLICA.Port": "5433",
+			}},
+			dataAssertion: deepEqual(&mapStructConfig{
+				Databases: map[string]dbConfig{
+					"PRIMARY": {Host: "h1", Port: 5432},
+					"REPLICA": {Host: "h2", Port: 5433},
+				},
+			}),
+			errAssertion: noError,
+		},
+		{
+			caseName: "subkeys-map-of-ptr-structs",
+			input:    &mapPtrStructConfig{},
+			provider: &mockProvider{st: map[string]string{
+				"Databases.PRIMARY.Host": "h1",
+				"Databases.PRIMARY.Port": "5432",
+				"Databases.REPLICA.Host": "h2",
+				"Databases.REPLICA.Port": "5433",
+			}},
+			dataAssertion: deepEqual(&mapPtrStructConfig{
+				Databases: map[string]*dbConfig{
+					"PRIMARY": {Host: "h1", Port: 5432},
+					"REPLICA": {Host: "h2", Port: 5433},
+				},
+			}),
+			errAssertion: noError,
+		},
+		{
+			caseName:      "subkeys-map-no-keys",
+			input:         &mapStructConfig{},
+			provider:      &mockProvider{st: map[string]string{}},
+			dataAssertion: deepEqual(&mapStructConfig{}),
+			errAssertion:  noError,
+		},
+		{
+			caseName: "subkeys-map-union",
+			input:    &mapStructConfig{},
+			provider: &mockProvider{st: map[string]string{
+				"Databases.B.Host": "h2",
+				"Databases.B.Port": "2",
+			}},
+			options: []Option{WithProviders(&mockProvider{st: map[string]string{
+				"Databases.A.Host": "h1",
+				"Databases.A.Port": "1",
+			}})},
+			dataAssertion: deepEqual(&mapStructConfig{
+				Databases: map[string]dbConfig{
+					"A": {Host: "h1", Port: 1},
+					"B": {Host: "h2", Port: 2},
+				},
+			}),
+			errAssertion: noError,
+		},
+
+		// SubKeys: []Struct
+		{
+			caseName: "subkeys-slice-of-structs",
+			input:    &sliceStructConfig{},
+			provider: &mockProvider{st: map[string]string{
+				"Workers.0.Host": "h0",
+				"Workers.0.Port": "1000",
+				"Workers.1.Host": "h1",
+				"Workers.1.Port": "1001",
+			}},
+			dataAssertion: deepEqual(&sliceStructConfig{
+				Workers: []dbConfig{
+					{Host: "h0", Port: 1000},
+					{Host: "h1", Port: 1001},
+				},
+			}),
+			errAssertion: noError,
+		},
+		{
+			caseName: "subkeys-slice-of-ptr-structs",
+			input:    &slicePtrStructConfig{},
+			provider: &mockProvider{st: map[string]string{
+				"Workers.0.Host": "h0",
+				"Workers.0.Port": "1000",
+				"Workers.1.Host": "h1",
+				"Workers.1.Port": "1001",
+			}},
+			dataAssertion: deepEqual(&slicePtrStructConfig{
+				Workers: []*dbConfig{
+					{Host: "h0", Port: 1000},
+					{Host: "h1", Port: 1001},
+				},
+			}),
+			errAssertion: noError,
+		},
+		{
+			caseName: "subkeys-slice-filters-non-numeric",
+			input:    &sliceStructConfig{},
+			provider: &mockProvider{st: map[string]string{
+				"Workers.0.Host":   "h0",
+				"Workers.0.Port":   "80",
+				"Workers.abc.Host": "bad",
+				"Workers.1x.Host":  "bad",
+			}},
+			dataAssertion: deepEqual(&sliceStructConfig{
+				Workers: []dbConfig{{Host: "h0", Port: 80}},
+			}),
+			errAssertion: noError,
+		},
+		{
+			caseName: "subkeys-slice-sorts-by-index",
+			input:    &sliceStructConfig{},
+			provider: &mockProvider{st: map[string]string{
+				"Workers.2.Host": "h2",
+				"Workers.2.Port": "2",
+				"Workers.0.Host": "h0",
+				"Workers.0.Port": "0",
+			}},
+			dataAssertion: deepEqual(&sliceStructConfig{
+				Workers: []dbConfig{
+					{Host: "h0", Port: 0},
+					{Host: "h2", Port: 2},
+				},
+			}),
+			errAssertion: noError,
+		},
+		{
+			caseName:      "subkeys-slice-no-keys",
+			input:         &sliceStructConfig{},
+			provider:      &mockProvider{st: map[string]string{}},
+			dataAssertion: deepEqual(&sliceStructConfig{}),
+			errAssertion:  noError,
+		},
 	} {
 		t.Run(
 			tCase.caseName,
@@ -747,12 +917,24 @@ type prefixedConfig struct {
 	value  any
 }
 
-func (p *prefixedConfig) WalkPrefix() []string { return p.prefix }
-func (p *prefixedConfig) WalkValue() any       { return p.value }
+func (p *prefixedConfig) WalkAncestor() *walker.Field {
+	var ancestor *walker.Field
+
+	for _, seg := range p.prefix {
+		ancestor = &walker.Field{
+			Field:    reflect.StructField{Name: seg},
+			Ancestor: ancestor,
+		}
+	}
+
+	return ancestor
+}
+
+func (p *prefixedConfig) WalkValue() any { return p.value }
 
 type outerPrefixedConfig struct {
 	Direct string `mock:"direct"`
-	Nested *prefixedConfig
+	Nested *walker.SubKeyPrefixed
 }
 
 func TestPrefixedPopulate(t *testing.T) {
@@ -826,49 +1008,25 @@ func TestPrefixedPopulate(t *testing.T) {
 	}
 }
 
-func TestNestedPrefixedPopulate(t *testing.T) {
-	for _, tc := range []struct {
-		name      string
-		have      *outerPrefixedConfig
-		provider  provider.Provider
-		wantOuter string
-		wantInner *basicStruct1
-	}{
-		{
-			name: "nested prefixed field",
-			have: &outerPrefixedConfig{
-				Nested: &prefixedConfig{
-					prefix: []string{"ns"},
-					value:  &basicStruct1{},
-				},
-			},
-			provider:  &mockProvider{st: map[string]string{"direct": "top", "Nested.ns.Fiz": "deep"}},
-			wantOuter: "top",
-			wantInner: &basicStruct1{Fiz: "deep"},
-		},
-		{
-			name: "nested prefixed with multi-segment prefix",
-			have: &outerPrefixedConfig{
-				Nested: &prefixedConfig{
-					prefix: []string{"a", "b"},
-					value:  &basicStruct1{},
-				},
-			},
-			provider:  &mockProvider{st: map[string]string{"Nested.a.b.Fiz": "val"}},
-			wantOuter: "",
-			wantInner: &basicStruct1{Fiz: "val"},
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			c := NewConfiguratorWithOptions(WithProviders(tc.provider))
+type dbConfig struct {
+	Host string
+	Port int32
+}
 
-			err := c.Populate(context.Background(), tc.have)
+type mapStructConfig struct {
+	Databases map[string]dbConfig
+}
 
-			require.NoError(t, err)
-			assert.Equal(t, tc.wantOuter, tc.have.Direct)
-			assert.Equal(t, tc.wantInner, tc.have.Nested.value)
-		})
-	}
+type mapPtrStructConfig struct {
+	Databases map[string]*dbConfig
+}
+
+type sliceStructConfig struct {
+	Workers []dbConfig
+}
+
+type slicePtrStructConfig struct {
+	Workers []*dbConfig
 }
 
 func ExampleNewDefaultConfigurator() {

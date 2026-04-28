@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"reflect"
 	"slices"
 	"sort"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	"github.com/upfluence/errors"
 
 	"github.com/upfluence/cfg"
+	"github.com/upfluence/cfg/internal/walker"
 	"github.com/upfluence/cfg/x/cli"
 	"github.com/upfluence/cfg/x/cli/output/printer"
 	"github.com/upfluence/cfg/x/cli/output/printer/json"
@@ -86,13 +88,9 @@ func WrapDefaultCommand[T any](cmd Command[T], additionalPrinters ...printer.Pri
 	)
 }
 
-type prefixedConfig struct {
-	prefix string
-	value  any
+var outputAncestor = &walker.Field{
+	Field: reflect.StructField{Name: "output"},
 }
-
-func (p *prefixedConfig) WalkPrefix() []string { return []string{"output", p.prefix} }
-func (p *prefixedConfig) WalkValue() any       { return p.value }
 
 type prefixedConfigurator struct {
 	inner  cfg.Configurator
@@ -100,7 +98,11 @@ type prefixedConfigurator struct {
 }
 
 func (pc *prefixedConfigurator) Populate(ctx context.Context, in any) error {
-	return pc.inner.Populate(ctx, &prefixedConfig{prefix: pc.prefix, value: in}) //nolint:wrapcheck
+	return pc.inner.Populate(ctx, &walker.SubKeyPrefixed{ //nolint:wrapcheck
+		Ancestor: outputAncestor,
+		SubKey:   pc.prefix,
+		Value:    in,
+	})
 }
 
 func (pc *prefixedConfigurator) WithOptions(opts ...cfg.Option) cfg.Configurator {
@@ -130,7 +132,11 @@ func (wc *wrappedCommand[T]) wrapIntrospectionOptions(opts cli.IntrospectionOpti
 		key := p.Key()
 
 		for i, c := range def.Configs {
-			def.Configs[i] = &prefixedConfig{prefix: key, value: c}
+			def.Configs[i] = &walker.SubKeyPrefixed{
+				Ancestor: outputAncestor,
+				SubKey:   key,
+				Value:    c,
+			}
 		}
 
 		opts.Definitions = append(opts.Definitions, def)

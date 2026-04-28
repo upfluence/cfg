@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"io"
 
+	"github.com/upfluence/errors"
+
 	"github.com/upfluence/cfg/internal/setter"
 	"github.com/upfluence/cfg/internal/walker"
 	"github.com/upfluence/cfg/provider"
@@ -24,50 +26,69 @@ type Writer struct {
 func (w *Writer) Write(out io.Writer, in interface{}) (int, error) {
 	var b bytes.Buffer
 
-	if err := walker.Walk(
-		in,
-		func(f *walker.Field) error {
-			if s := w.Factory.Build(f.Field.Type); s == nil {
-				return nil
-			}
+	writeFn := w.buildWriteFn(&b)
 
-			fks := walker.BuildFieldKeys(
-				provider.WrapFullyQualifiedProvider(w.Provider),
-				f,
-				w.IgnoreMissingTag,
-			)
-
-			if len(fks) == 0 {
-				return nil
-			}
-
-			if setter.IsUnmarshaler(f.Value.Type()) {
-				return walker.SkipStruct
-			}
-
-			b.WriteRune('[')
-
-			kf, hasFormatter := w.Provider.(provider.KeyFormatter)
-
-			for i, fk := range fks {
-				if hasFormatter {
-					fk = kf.FormatKey(fk)
-				}
-
-				b.WriteString(fk)
-
-				if i < len(fks)-1 {
-					b.WriteString(", ")
-				}
-			}
-
-			b.WriteString("] ")
-
-			return nil
-		},
-	); err != nil {
-		return 0, err
+	if err := walker.Walk(in, writeFn); err != nil {
+		return 0, errors.Wrap(err, "walk")
 	}
 
-	return out.Write(b.Bytes())
+	n, err := out.Write(b.Bytes())
+
+	return n, errors.Wrap(err, "write")
+}
+
+func (w *Writer) buildWriteFn(b *bytes.Buffer) walker.WalkFunc {
+	return func(f *walker.Field) error {
+		if s := w.Factory.Build(f.Field.Type); s == nil {
+			return w.writeSubKeyField(b, f)
+		}
+
+		fks := walker.BuildFieldKeys(
+			provider.WrapFullyQualifiedProvider(w.Provider),
+			f,
+			w.IgnoreMissingTag,
+		)
+
+		if len(fks) == 0 {
+			return nil
+		}
+
+		if setter.IsUnmarshaler(f.Value.Type()) {
+			return walker.SkipStruct
+		}
+
+		w.writeKeys(b, fks)
+
+		return nil
+	}
+}
+
+func (w *Writer) writeKeys(b *bytes.Buffer, fks []string) {
+	b.WriteRune('[')
+
+	kf, hasFormatter := w.Provider.(provider.KeyFormatter)
+
+	for i, fk := range fks {
+		if hasFormatter {
+			fk = kf.FormatKey(fk)
+		}
+
+		b.WriteString(fk)
+
+		if i < len(fks)-1 {
+			b.WriteString(", ")
+		}
+	}
+
+	b.WriteString("] ")
+}
+
+func (w *Writer) writeSubKeyField(b *bytes.Buffer, f *walker.Field) error {
+	prefixed := walker.BuildSubKeyField(f)
+
+	if prefixed == nil {
+		return nil
+	}
+
+	return errors.Wrap(walker.Walk(prefixed, w.buildWriteFn(b)), "walk")
 }
