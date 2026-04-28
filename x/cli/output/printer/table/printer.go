@@ -167,5 +167,5 @@ func (p *tablePrinter[T]) Print(ctx context.Context, cctx cli.CommandContext, vs
 		}
 	}
 
-	return f.Flush()
+	return errors.Wrap(f.Flush(), "flush formatter")
 }

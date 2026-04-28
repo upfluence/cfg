@@ -799,7 +799,9 @@ func TestPrefixedPopulate(t *testing.T) {
 			want: func() *nestedStruct {
 				var v int64 = 42
 				ns := &nestedStruct{}
+
 				ns.Nested.Inner = &v
+
 				return ns
 			}(),
 		},

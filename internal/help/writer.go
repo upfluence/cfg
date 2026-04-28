@@ -28,7 +28,7 @@ var (
 		},
 	}
 
-	helperType = reflect.TypeOf((*helper)(nil)).Elem()
+	helperType = reflect.TypeFor[helper]()
 )
 
 type helper interface {

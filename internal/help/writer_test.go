@@ -45,15 +45,15 @@ type helpString string
 func (h helpString) Help() string { return string(h) }
 
 type helperFieldConfig struct {
-	Dynamic helpString `flag:"dyn" env:"-"`
+	Dynamic helpString `env:"-" flag:"dyn"`
 }
 
 type helperOverridesTagConfig struct {
-	Dynamic helpString `flag:"dyn" env:"-" help:"from tag"`
+	Dynamic helpString `env:"-" flag:"dyn" help:"from tag"`
 }
 
 type helperEmptyFallsBackConfig struct {
-	Dynamic helpString `flag:"dyn" env:"-" help:"from tag"`
+	Dynamic helpString `env:"-" flag:"dyn" help:"from tag"`
 }
 
 func TestPrintDefaults(t *testing.T) {
