@@ -48,6 +48,7 @@ func defaultOptions() *options {
 		version: Version,
 		ps:      []provider.Provider{dflt.Provider{}, env.NewDefaultProvider()},
 		newFunc: cfg.NewConfiguratorWithOptions,
+		opts:    []cfg.Option{cfg.HonorRequired},
 	}
 }
 
