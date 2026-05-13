@@ -18,9 +18,9 @@ import (
 var (
 	durationType        = reflect.TypeOf(time.Duration(0))
 	timeType            = reflect.TypeOf(time.Time{})
-	valueType           = reflect.TypeOf((*Value)(nil)).Elem()
-	textUnmarshalerType = reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem()
-	jsonUnmarshalerType = reflect.TypeOf((*json.Unmarshaler)(nil)).Elem()
+	valueType           = reflect.TypeFor[Value]()
+	textUnmarshalerType = reflect.TypeFor[encoding.TextUnmarshaler]()
+	jsonUnmarshalerType = reflect.TypeFor[json.Unmarshaler]()
 
 	durationParser = &staticParser{t: "duration", fn: parseDuration}
 	boolParser     = &staticParser{t: "bool", fn: parseBool}

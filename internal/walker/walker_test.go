@@ -33,6 +33,18 @@ type foo struct {
 	buz
 }
 
+type prefixed struct {
+	prefix []string
+	value  any
+}
+
+func (p *prefixed) WalkPrefix() []string { return p.prefix }
+func (p *prefixed) WalkValue() any       { return p.value }
+
+type outerWithPrefixed struct {
+	Nested *prefixed
+}
+
 func TestWalk(t *testing.T) {
 	var (
 		castedBazNil *baz
@@ -86,6 +98,60 @@ func TestWalk(t *testing.T) {
 			in:   &foo{},
 			outfn: func(t *testing.T, vs []string) {
 				assert.Equal(t, []string{"Foo.buz"}, vs)
+			},
+			errfn: errtest.NoError(),
+		},
+		{
+			name: "prefixed nil value",
+			in:   &prefixed{prefix: []string{"x"}, value: nil},
+			outfn: func(t *testing.T, vs []string) {
+				assert.Empty(t, vs)
+			},
+			errfn: errtest.ErrorEqual(ErrShouldBeAStructPtr),
+		},
+		{
+			name: "prefixed single segment",
+			in:   &prefixed{prefix: []string{"pfx"}, value: &buz{}},
+			outfn: func(t *testing.T, vs []string) {
+				assert.Equal(t, []string{"Foo.pfx"}, vs)
+			},
+			errfn: errtest.NoError(),
+		},
+		{
+			name: "prefixed multiple segments",
+			in:   &prefixed{prefix: []string{"a", "b"}, value: &buz{}},
+			outfn: func(t *testing.T, vs []string) {
+				assert.Equal(t, []string{"Foo.b.a"}, vs)
+			},
+			errfn: errtest.NoError(),
+		},
+		{
+			name: "prefixed nested struct",
+			in:   &prefixed{prefix: []string{"ns"}, value: &baz{}},
+			outfn: func(t *testing.T, vs []string) {
+				assert.Equal(
+					t,
+					[]string{"Struct.ns", "Foo.Struct.ns", "StructPtr.ns", "Foo.StructPtr.ns"},
+					vs,
+				)
+			},
+			errfn: errtest.NoError(),
+		},
+		{
+			name: "prefixed empty prefix",
+			in:   &prefixed{prefix: nil, value: &buz{}},
+			outfn: func(t *testing.T, vs []string) {
+				assert.Equal(t, []string{"Foo"}, vs)
+			},
+			errfn: errtest.NoError(),
+		},
+		{
+			name: "nested prefixed field",
+			in: &outerWithPrefixed{
+				Nested: &prefixed{prefix: []string{"dyn"}, value: &buz{}},
+			},
+			outfn: func(t *testing.T, vs []string) {
+				assert.Equal(t, []string{"Nested", "Foo.dyn.Nested"}, vs)
 			},
 			errfn: errtest.NoError(),
 		},

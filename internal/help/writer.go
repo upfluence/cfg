@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"reflect"
 	"strings"
 
 	"github.com/upfluence/cfg/internal/reflectutil"
@@ -26,7 +27,33 @@ var (
 			flags.NewDefaultProvider(),
 		},
 	}
+
+	helperType = reflect.TypeFor[helper]()
 )
+
+type helper interface {
+	Help() string
+}
+
+func fieldHelp(f *walker.Field) string {
+	fv := reflectutil.IndirectedValue(f.Value).FieldByName(f.Field.Name)
+
+	if fv.CanAddr() && fv.Addr().Type().Implements(helperType) {
+		if h := fv.Addr().Interface().(helper).Help(); h != "" {
+			return h
+		}
+	} else if fv.Type().Implements(helperType) && fv.CanInterface() {
+		if h := fv.Interface().(helper).Help(); h != "" {
+			return h
+		}
+	}
+
+	if h, ok := f.Field.Tag.Lookup("help"); ok {
+		return h
+	}
+
+	return ""
+}
 
 type Writer struct {
 	Providers        []provider.Provider
@@ -69,12 +96,12 @@ func (w *Writer) writeConfig(out io.Writer, in interface{}) (int, error) {
 			b.WriteString(": ")
 			b.WriteString(s.String())
 
-			if h, ok := f.Field.Tag.Lookup("help"); ok {
+			if h := fieldHelp(f); h != "" {
 				b.WriteString(" ")
 				b.WriteString(h)
 			}
 
-			defaultValue := w.fieldDefault(f)
+			defaultValue := fieldDefault(f)
 			providedKeys, tagDefault := w.providerKeys(f)
 
 			if tagDefault != "" {
@@ -106,7 +133,7 @@ func (w *Writer) writeConfig(out io.Writer, in interface{}) (int, error) {
 	)
 }
 
-func (w *Writer) fieldDefault(f *walker.Field) string {
+func fieldDefault(f *walker.Field) string {
 	fv := reflectutil.IndirectedValue(f.Value).FieldByName(f.Field.Name)
 
 	if reflectutil.IsZero(fv) {

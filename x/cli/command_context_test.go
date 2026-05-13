@@ -15,7 +15,7 @@ func TestSubCommand(t *testing.T) {
 	var (
 		buf bytes.Buffer
 
-		cctx = newCommandContext("", nil, nil, nil)
+		cctx = newCommandContext(&App{stdin: os.Stdin, stdout: os.Stdout, stderr: os.Stderr}, nil, nil, nil)
 	)
 
 	cctx.Stdout = &buf

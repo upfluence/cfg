@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"io"
 	"os"
 
 	"github.com/upfluence/cfg"
@@ -21,6 +22,10 @@ func WithCommand(cmd Command) Option {
 	return func(o *options) { o.cmd = cmd }
 }
 
+func WithArgs(args []string) Option {
+	return func(o *options) { o.args = args }
+}
+
 func WithConfiguratorOptions(opts ...cfg.Option) Option {
 	return func(o *options) { o.opts = append(o.opts, opts...) }
 }
@@ -29,11 +34,27 @@ func WithNewConfiguratorFunc(fn NewConfiguratorFunc) Option {
 	return func(o *options) { o.newFunc = fn }
 }
 
+func WithStdin(r io.Reader) Option {
+	return func(o *options) { o.stdin = r }
+}
+
+func WithStdout(w io.Writer) Option {
+	return func(o *options) { o.stdout = w }
+}
+
+func WithStderr(w io.Writer) Option {
+	return func(o *options) { o.stderr = w }
+}
+
 type options struct {
 	name string
 	args []string
 
 	version string
+
+	stdin  io.Reader
+	stdout io.Writer
+	stderr io.Writer
 
 	cmd     Command
 	ps      []provider.Provider
@@ -46,6 +67,9 @@ func defaultOptions() *options {
 		name:    os.Args[0],
 		args:    os.Args[1:],
 		version: Version,
+		stdin:   os.Stdin,
+		stdout:  os.Stdout,
+		stderr:  os.Stderr,
 		ps:      []provider.Provider{dflt.Provider{}, env.NewDefaultProvider()},
 		newFunc: cfg.NewConfiguratorWithOptions,
 		opts:    []cfg.Option{cfg.HonorRequired},
