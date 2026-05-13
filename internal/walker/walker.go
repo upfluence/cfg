@@ -21,15 +21,6 @@ type Field struct {
 
 type WalkFunc func(*Field) error
 
-// Prefixed is an optional interface that a value passed to Walk can
-// implement to inject dynamic key prefix segments.  When Walk receives a
-// Prefixed value it builds a synthetic ancestor chain from the prefix
-// segments and walks the inner value returned by WalkValue.
-type Prefixed interface {
-	WalkPrefix() []string
-	WalkValue() any
-}
-
 func Walk(in any, fn WalkFunc) error {
 	return walkValue(in, fn, nil)
 }
@@ -43,14 +34,25 @@ func walkValue(in any, fn WalkFunc, ancestor *Field) error {
 }
 
 func walkPrefixed(p Prefixed, fn WalkFunc, ancestor *Field) error {
-	for _, seg := range p.WalkPrefix() {
-		ancestor = &Field{
-			Field:    reflect.StructField{Name: seg},
-			Ancestor: ancestor,
-		}
+	extra := p.WalkAncestor()
+
+	if extra == nil {
+		return walkValue(p.WalkValue(), fn, ancestor)
 	}
 
-	return walkValue(p.WalkValue(), fn, ancestor)
+	// Clone the extra chain and graft it onto the incoming ancestor
+	// so that the original chain is not mutated.
+	clone := &Field{Field: extra.Field}
+	tip := clone
+
+	for cur := extra.Ancestor; cur != nil; cur = cur.Ancestor {
+		tip.Ancestor = &Field{Field: cur.Field}
+		tip = tip.Ancestor
+	}
+
+	tip.Ancestor = ancestor
+
+	return walkValue(p.WalkValue(), fn, clone)
 }
 
 func walkStruct(in any, fn WalkFunc, ancestor *Field) error {

@@ -1,6 +1,7 @@
 package walker
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 
@@ -38,8 +39,20 @@ type prefixed struct {
 	value  any
 }
 
-func (p *prefixed) WalkPrefix() []string { return p.prefix }
-func (p *prefixed) WalkValue() any       { return p.value }
+func (p *prefixed) WalkAncestor() *Field {
+	var ancestor *Field
+
+	for _, seg := range p.prefix {
+		ancestor = &Field{
+			Field:    reflect.StructField{Name: seg},
+			Ancestor: ancestor,
+		}
+	}
+
+	return ancestor
+}
+
+func (p *prefixed) WalkValue() any { return p.value }
 
 type outerWithPrefixed struct {
 	Nested *prefixed

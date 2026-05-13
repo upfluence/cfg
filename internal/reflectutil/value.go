@@ -50,3 +50,35 @@ func IndirectedType(t reflect.Type) reflect.Type {
 
 	return t
 }
+
+// SubKeyMapElem returns the struct type of the map's element if t is
+// map[string]S where S (or *S) is a struct.  Otherwise it returns nil.
+func SubKeyMapElem(t reflect.Type) reflect.Type {
+	t = IndirectedType(t)
+
+	if t.Kind() != reflect.Map || t.Key().Kind() != reflect.String {
+		return nil
+	}
+
+	if et := IndirectedType(t.Elem()); et.Kind() == reflect.Struct {
+		return et
+	}
+
+	return nil
+}
+
+// SubKeySliceElem returns the struct type of the slice's element if t
+// is []S where S (or *S) is a struct.  Otherwise it returns nil.
+func SubKeySliceElem(t reflect.Type) reflect.Type {
+	t = IndirectedType(t)
+
+	if t.Kind() != reflect.Slice {
+		return nil
+	}
+
+	if et := IndirectedType(t.Elem()); et.Kind() == reflect.Struct {
+		return et
+	}
+
+	return nil
+}

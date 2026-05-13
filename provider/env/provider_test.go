@@ -3,7 +3,11 @@ package env
 import (
 	"context"
 	"os"
+	"sort"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestProvider_Provide(t *testing.T) {
@@ -75,6 +79,74 @@ func TestProvider_Provide(t *testing.T) {
 			if got1 != tt.exist {
 				t.Errorf("Provider.Provide() got1 = %v, want %v", got1, tt.exist)
 			}
+		})
+	}
+}
+
+func TestProvider_SubKeys(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		haveEnv map[string]string
+		haveKey string
+		prefix  string
+		want    []string
+	}{
+		{
+			name:    "no matching vars",
+			haveKey: "DB",
+			want:    []string{},
+		},
+		{
+			name:    "single sub-key",
+			haveEnv: map[string]string{"DB_PRIMARY_HOST": "localhost"},
+			haveKey: "DB",
+			want:    []string{"PRIMARY"},
+		},
+		{
+			name: "multiple sub-keys",
+			haveEnv: map[string]string{
+				"DB_PRIMARY_HOST":   "h1",
+				"DB_PRIMARY_PORT":   "5432",
+				"DB_REPLICA_HOST":   "h2",
+				"DB_SECONDARY_HOST": "h3",
+			},
+			haveKey: "DB",
+			want:    []string{"PRIMARY", "REPLICA", "SECONDARY"},
+		},
+		{
+			name: "with global prefix",
+			haveEnv: map[string]string{
+				"APP_CACHE_REDIS_HOST":    "r1",
+				"APP_CACHE_MEMCACHE_HOST": "m1",
+				"CACHE_OTHER_HOST":        "x",
+			},
+			haveKey: "CACHE",
+			prefix:  "app",
+			want:    []string{"MEMCACHE", "REDIS"},
+		},
+		{
+			name: "ignores vars with empty segment after prefix",
+			haveEnv: map[string]string{
+				"DB_HOST": "localhost",
+			},
+			haveKey: "DB_HOST",
+			want:    []string{},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			for k, v := range tc.haveEnv {
+				t.Setenv(k, v)
+			}
+
+			p := &Provider{prefix: tc.prefix}
+
+			got, err := p.SubKeys(context.Background(), tc.haveKey)
+
+			require.NoError(t, err)
+
+			sort.Strings(got)
+			sort.Strings(tc.want)
+			assert.Equal(t, tc.want, got)
 		})
 	}
 }

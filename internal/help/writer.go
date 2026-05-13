@@ -7,6 +7,8 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/upfluence/errors"
+
 	"github.com/upfluence/cfg/internal/reflectutil"
 	"github.com/upfluence/cfg/internal/setter"
 	"github.com/upfluence/cfg/internal/walker"
@@ -64,73 +66,91 @@ type Writer struct {
 func (w *Writer) writeConfig(out io.Writer, in interface{}) (int, error) {
 	var n int
 
-	return n, walker.Walk(
-		in,
-		func(f *walker.Field) error {
-			s := w.Factory.Build(f.Field.Type)
+	return n, errors.Wrap(walker.Walk(in, w.buildWalkFn(out, &n, true)), "walk")
+}
 
-			if s == nil {
-				return nil
-			}
+func (w *Writer) buildWalkFn(out io.Writer, n *int, includeDefaults bool) walker.WalkFunc {
+	return func(f *walker.Field) error {
+		s := w.Factory.Build(f.Field.Type)
 
-			fks := walker.BuildFieldKeys(
-				provider.WrapFullyQualifiedProvider(
-					provider.NewStaticProvider("", nil, nil),
-				),
-				f,
-				w.IgnoreMissingTag,
-			)
+		if s == nil {
+			return w.writeSubKeyField(out, n, f)
+		}
 
-			if len(fks) == 0 {
-				return nil
-			}
+		fks := walker.BuildFieldKeys(
+			provider.WrapFullyQualifiedProvider(
+				provider.NewStaticProvider("", nil, nil),
+			),
+			f,
+			w.IgnoreMissingTag,
+		)
 
-			if setter.IsUnmarshaler(f.Value.Type()) {
-				return walker.SkipStruct
-			}
+		if len(fks) == 0 {
+			return nil
+		}
 
-			var b bytes.Buffer
+		if setter.IsUnmarshaler(f.Value.Type()) {
+			return walker.SkipStruct
+		}
 
-			b.WriteString("\t- ")
-			b.WriteString(fks[0])
-			b.WriteString(": ")
-			b.WriteString(s.String())
+		var b bytes.Buffer
 
+		b.WriteString("\t- ")
+		b.WriteString(fks[0])
+		b.WriteString(": ")
+		b.WriteString(s.String())
+
+		if includeDefaults {
 			if h := fieldHelp(f); h != "" {
 				b.WriteString(" ")
 				b.WriteString(h)
 			}
+		}
 
-			defaultValue := fieldDefault(f)
-			providedKeys, tagDefault := w.providerKeys(f)
+		var defaultValue string
+
+		providedKeys, tagDefault := w.providerKeys(f)
+
+		if includeDefaults {
+			defaultValue = fieldDefault(f)
 
 			if tagDefault != "" {
 				defaultValue = tagDefault
 			}
+		}
 
-			if len(providedKeys) == 0 {
-				return nil
-			}
+		if len(providedKeys) == 0 {
+			return nil
+		}
 
-			if defaultValue != "" {
-				b.WriteString(" (default: ")
-				b.WriteString(defaultValue)
-				b.WriteString(")")
-			}
-
-			b.WriteString(" (")
-			b.WriteString(strings.Join(providedKeys, ", "))
+		if defaultValue != "" {
+			b.WriteString(" (default: ")
+			b.WriteString(defaultValue)
 			b.WriteString(")")
+		}
 
-			b.WriteRune('\n')
+		b.WriteString(" (")
+		b.WriteString(strings.Join(providedKeys, ", "))
+		b.WriteString(")")
 
-			nn, err := b.WriteTo(out)
+		b.WriteRune('\n')
 
-			n += int(nn)
+		nn, err := b.WriteTo(out)
 
-			return err
-		},
-	)
+		*n += int(nn)
+
+		return errors.Wrap(err, "write")
+	}
+}
+
+func (w *Writer) writeSubKeyField(out io.Writer, n *int, f *walker.Field) error {
+	prefixed := walker.BuildSubKeyField(f)
+
+	if prefixed == nil {
+		return nil
+	}
+
+	return errors.Wrap(walker.Walk(prefixed, w.buildWalkFn(out, n, false)), "walk")
 }
 
 func fieldDefault(f *walker.Field) string {

@@ -56,6 +56,18 @@ type helperEmptyFallsBackConfig struct {
 	Dynamic helpString `env:"-" flag:"dyn" help:"from tag"`
 }
 
+type mapStructConfig struct {
+	Databases map[string]dbConfig `env:"DATABASES" flag:"databases"`
+}
+
+type sliceStructConfig struct {
+	Workers []dbConfig `env:"WORKERS" flag:"workers"`
+}
+
+type mapPtrStructConfig struct {
+	Databases map[string]*dbConfig `env:"DATABASES" flag:"databases"`
+}
+
 func TestPrintDefaults(t *testing.T) {
 	for _, tt := range []struct {
 		name string
@@ -118,6 +130,27 @@ func TestPrintDefaults(t *testing.T) {
 			in:   &helperEmptyFallsBackConfig{},
 			out: "Arguments:\n" +
 				"\t- Dynamic: string from tag (flag: --dyn)\n",
+		},
+		{
+			name: "map of structs shows inner fields with <key> placeholder",
+			in:   &mapStructConfig{},
+			out: "Arguments:\n" +
+				"\t- Databases.<key>.Host: string (env: DATABASES_<KEY>_HOST, flag: --databases.<key>.host)\n" +
+				"\t- Databases.<key>.Port: integer (env: DATABASES_<KEY>_PORT, flag: --databases.<key>.port)\n",
+		},
+		{
+			name: "slice of structs shows inner fields with <N> placeholder",
+			in:   &sliceStructConfig{},
+			out: "Arguments:\n" +
+				"\t- Workers.<N>.Host: string (env: WORKERS_<N>_HOST, flag: --workers.<n>.host)\n" +
+				"\t- Workers.<N>.Port: integer (env: WORKERS_<N>_PORT, flag: --workers.<n>.port)\n",
+		},
+		{
+			name: "map of ptr structs shows inner fields with <key> placeholder",
+			in:   &mapPtrStructConfig{},
+			out: "Arguments:\n" +
+				"\t- Databases.<key>.Host: string (env: DATABASES_<KEY>_HOST, flag: --databases.<key>.host)\n" +
+				"\t- Databases.<key>.Port: integer (env: DATABASES_<KEY>_PORT, flag: --databases.<key>.port)\n",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

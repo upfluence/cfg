@@ -74,6 +74,44 @@ func (p *Provider) Provide(_ context.Context, v string) (string, bool, error) {
 	return stringifyValue(res), true, nil
 }
 
+func (p *Provider) SubKeys(_ context.Context, prefix string) ([]string, error) {
+	cur := p.navigateTo(prefix)
+
+	if cur == nil {
+		return nil, nil
+	}
+
+	keys := make([]string, 0, len(cur))
+
+	for k := range cur {
+		keys = append(keys, k)
+	}
+
+	return keys, nil
+}
+
+func (p *Provider) navigateTo(prefix string) map[string]any {
+	cur := p.store
+
+	for k := range strings.SplitSeq(prefix, ".") {
+		t := cur[k]
+
+		if t == nil {
+			return nil
+		}
+
+		next, ok := t.(map[string]any)
+
+		if !ok {
+			return nil
+		}
+
+		cur = next
+	}
+
+	return cur
+}
+
 func stringifyValue(v interface{}) string {
 	vv := reflect.ValueOf(v)
 

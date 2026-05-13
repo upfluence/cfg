@@ -78,17 +78,21 @@ func NewDefaultProvider() *Provider {
 }
 
 func NewProvider(args []string) *Provider {
+	fs := parseFlags(args)
+
 	return &Provider{
+		flags: fs,
 		sp: provider.NewStaticProvider(
 			StructTag,
-			parseFlags(args),
+			fs,
 			strings.ToLower,
 		),
 	}
 }
 
 type Provider struct {
-	sp provider.Provider
+	flags map[string]string
+	sp    provider.Provider
 }
 
 func kebabCase(s string) string {
@@ -119,6 +123,38 @@ func (*Provider) DefaultFieldValue(fieldName string) string {
 
 func (*Provider) JoinFieldKeys(prefix, key string) string {
 	return prefix + "." + key
+}
+
+func (p *Provider) SubKeys(_ context.Context, prefix string) ([]string, error) {
+	fullPrefix := prefix + "."
+
+	seen := make(map[string]struct{})
+
+	for k := range p.flags {
+		if !strings.HasPrefix(k, fullPrefix) {
+			continue
+		}
+
+		rest := k[len(fullPrefix):]
+
+		if idx := strings.IndexByte(rest, '.'); idx >= 0 {
+			rest = rest[:idx]
+		}
+
+		if rest == "" {
+			continue
+		}
+
+		seen[rest] = struct{}{}
+	}
+
+	keys := make([]string, 0, len(seen))
+
+	for k := range seen {
+		keys = append(keys, k)
+	}
+
+	return keys, nil
 }
 
 func (*Provider) FormatKey(n string) string {

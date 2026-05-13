@@ -4,6 +4,8 @@ import (
 	"context"
 	"os"
 	"reflect"
+	"sort"
+	"strconv"
 
 	"github.com/upfluence/errors"
 
@@ -112,6 +114,14 @@ func (c *configurator) walkFunc(ctx context.Context, f *walker.Field) error {
 	s := c.factory.Build(f.Field.Type)
 
 	if s == nil {
+		if reflectutil.SubKeyMapElem(f.Field.Type) != nil {
+			return c.populateMapField(ctx, f)
+		}
+
+		if reflectutil.SubKeySliceElem(f.Field.Type) != nil {
+			return c.populateSliceField(ctx, f)
+		}
+
 		return nil
 	}
 
@@ -178,6 +188,155 @@ func (c *configurator) walkFunc(ctx context.Context, f *walker.Field) error {
 	}
 
 	return nil
+}
+
+func (c *configurator) collectSubKeys(ctx context.Context, f *walker.Field) ([]string, error) {
+	seen := make(map[string]struct{})
+
+	var keys []string
+
+	for _, p := range c.providers {
+		fqp := provider.WrapFullyQualifiedProvider(p)
+
+		for _, prefix := range walker.BuildFieldKeys(fqp, f, c.ignoreMissingTag) {
+			sks, err := fqp.SubKeys(ctx, prefix)
+
+			if err != nil {
+				return nil, errors.WithStack(
+					&ProvidingError{
+						Err:      err,
+						Key:      prefix,
+						Field:    f.Field,
+						Provider: p,
+					},
+				)
+			}
+
+			for _, k := range sks {
+				if _, dup := seen[k]; dup {
+					continue
+				}
+
+				seen[k] = struct{}{}
+				keys = append(keys, k)
+			}
+		}
+	}
+
+	return keys, nil
+}
+
+func (c *configurator) populateMapField(ctx context.Context, f *walker.Field) error {
+	ft := reflectutil.IndirectedType(f.Field.Type)
+	elemIsPtr := ft.Elem().Kind() == reflect.Ptr
+	structType := reflectutil.SubKeyMapElem(f.Field.Type)
+
+	keys, err := c.collectSubKeys(ctx, f)
+
+	if err != nil {
+		return err
+	}
+
+	if len(keys) == 0 {
+		return walker.SkipStruct
+	}
+
+	fv := reflectutil.IndirectedValue(f.Value).FieldByName(f.Field.Name)
+	mapVal := reflect.MakeMap(ft)
+
+	for _, subKey := range keys {
+		elem := reflect.New(structType)
+
+		prefixed := &walker.SubKeyPrefixed{
+			Ancestor: f,
+			SubKey:   subKey,
+			Value:    elem.Interface(),
+		}
+
+		if err := c.Populate(ctx, prefixed); err != nil {
+			return err
+		}
+
+		if reflectutil.IsZero(elem.Elem()) {
+			continue
+		}
+
+		if elemIsPtr {
+			mapVal.SetMapIndex(reflect.ValueOf(subKey), elem)
+		} else {
+			mapVal.SetMapIndex(reflect.ValueOf(subKey), elem.Elem())
+		}
+	}
+
+	if mapVal.Len() > 0 {
+		fv.Set(mapVal)
+	}
+
+	return walker.SkipStruct
+}
+
+func (c *configurator) populateSliceField(ctx context.Context, f *walker.Field) error {
+	ft := reflectutil.IndirectedType(f.Field.Type)
+	elemIsPtr := ft.Elem().Kind() == reflect.Ptr
+	structType := reflectutil.SubKeySliceElem(f.Field.Type)
+
+	keys, err := c.collectSubKeys(ctx, f)
+
+	if err != nil {
+		return err
+	}
+
+	type indexedKey struct {
+		index int
+		key   string
+	}
+
+	var indices []indexedKey
+
+	for _, k := range keys {
+		idx, err := strconv.Atoi(k)
+
+		if err != nil {
+			continue
+		}
+
+		indices = append(indices, indexedKey{index: idx, key: k})
+	}
+
+	if len(indices) == 0 {
+		return walker.SkipStruct
+	}
+
+	sort.Slice(indices, func(i, j int) bool {
+		return indices[i].index < indices[j].index
+	})
+
+	fv := reflectutil.IndirectedValue(f.Value).FieldByName(f.Field.Name)
+	sliceVal := reflect.MakeSlice(ft, len(indices), len(indices))
+
+	for i, ik := range indices {
+		elem := reflect.New(structType)
+
+		prefixed := &walker.SubKeyPrefixed{
+			Ancestor: f,
+			SubKey:   ik.key,
+			Value:    elem.Interface(),
+		}
+
+		if err := c.Populate(ctx, prefixed); err != nil {
+			return err
+		}
+
+		if elemIsPtr {
+			sliceVal.Index(i).Set(elem)
+		} else {
+			sliceVal.Index(i).Set(elem.Elem())
+		}
+	}
+
+	fv.Set(sliceVal)
+
+	return walker.SkipStruct
 }
 
 func isRequired(f reflect.StructField) bool {
