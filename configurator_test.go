@@ -245,6 +245,14 @@ type customBoolStruct struct {
 	Foo customBool `mock:"foo"`
 }
 
+type customStringSliceStruct struct {
+	Slice []customString `mock:"slice"`
+}
+
+type customIntMapStruct struct {
+	Map map[customString]customInt `mock:"map"`
+}
+
 type marshalerStruct struct {
 	Raw json.RawMessage
 	IP  net.IP
@@ -337,6 +345,24 @@ func TestConfigurator(t *testing.T) {
 			provider:      &mockProvider{st: map[string]string{"foo": "true"}},
 			dataAssertion: deepEqual(&customBoolStruct{Foo: true}),
 			errAssertion:  noError,
+		},
+		testCase{
+			input:    &customStringSliceStruct{},
+			caseName: "typedef-slice",
+			provider: &mockProvider{st: map[string]string{"slice": "foo,bar"}},
+			dataAssertion: deepEqual(
+				&customStringSliceStruct{Slice: []customString{"foo", "bar"}},
+			),
+			errAssertion: noError,
+		},
+		testCase{
+			input:    &customIntMapStruct{},
+			caseName: "typedef-map",
+			provider: &mockProvider{st: map[string]string{"map": "foo=1,bar=2"}},
+			dataAssertion: deepEqual(
+				&customIntMapStruct{Map: map[customString]customInt{"foo": 1, "bar": 2}},
+			),
+			errAssertion: noError,
 		},
 		testCase{
 			input:         &valueStruct{},

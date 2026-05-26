@@ -194,6 +194,16 @@ type parserSetter struct {
 
 func (s *parserSetter) String() string { return s.parser.String() }
 
+func prepareValue(v interface{}, t reflect.Type) reflect.Value {
+	rv := reflect.ValueOf(v)
+
+	if rv.Type() != t {
+		rv = rv.Convert(t)
+	}
+
+	return rv
+}
+
 func (s *parserSetter) Set(value string, t reflect.Value) error {
 	v, err := s.parser.parse(value, t.Type().Kind() == reflect.Ptr)
 
@@ -201,13 +211,7 @@ func (s *parserSetter) Set(value string, t reflect.Value) error {
 		return err
 	}
 
-	rv := reflect.ValueOf(v)
-
-	if rv.Type() != t.Type() {
-		rv = rv.Convert(t.Type())
-	}
-
-	t.Set(rv)
+	t.Set(prepareValue(v, t.Type()))
 
 	return nil
 }
@@ -322,7 +326,7 @@ func (mp *mapParser) parse(v string, ptr bool) (interface{}, error) {
 			return nil, err
 		}
 
-		res.SetMapIndex(reflect.ValueOf(k), reflect.ValueOf(v))
+		res.SetMapIndex(prepareValue(k, mp.t.Key()), prepareValue(v, mp.t.Elem()))
 	}
 
 	return res.Interface(), nil
@@ -355,7 +359,7 @@ func (sp *sliceParser) parse(v string, ptr bool) (interface{}, error) {
 			return nil, err
 		}
 
-		res = reflect.Append(res, reflect.ValueOf(v))
+		res = reflect.Append(res, prepareValue(v, sp.t.Elem()))
 	}
 
 	return res.Interface(), nil
