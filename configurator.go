@@ -23,6 +23,8 @@ type Configurator interface {
 	Populate(context.Context, interface{}) error
 
 	WithOptions(...Option) Configurator
+
+	Prefixed(string, map[string]string) Configurator
 }
 
 type Option func(*configurator)
@@ -101,6 +103,13 @@ func (c *configurator) withOptions(opts []Option) *configurator {
 
 func (c *configurator) WithOptions(opts ...Option) Configurator {
 	return c.withOptions(opts)
+}
+
+func (c *configurator) Prefixed(prefix string, overrides map[string]string) Configurator {
+	return &prefixedConfigurator{
+		inner:    c,
+		ancestor: buildPrefixField(prefix, overrides, nil),
+	}
 }
 
 func (c *configurator) Populate(ctx context.Context, in interface{}) error {

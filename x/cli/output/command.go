@@ -112,6 +112,10 @@ func (pc *prefixedConfigurator) WithOptions(opts ...cfg.Option) cfg.Configurator
 	}
 }
 
+func (pc *prefixedConfigurator) Prefixed(prefix string, overrides map[string]string) cfg.Configurator {
+	return pc.inner.Prefixed(prefix, overrides)
+}
+
 type wrappedCommand[T any] struct {
 	cmd Command[T]
 

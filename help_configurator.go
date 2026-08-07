@@ -30,6 +30,10 @@ func (hc *helpConfigurator) WithOptions(opts ...Option) Configurator {
 	return &dup
 }
 
+func (hc *helpConfigurator) Prefixed(prefix string, overrides map[string]string) Configurator {
+	return hc.configurator.Prefixed(prefix, overrides)
+}
+
 func (hc *helpConfigurator) Populate(ctx context.Context, in interface{}) error {
 	var cfg helpConfig
 

@@ -87,3 +87,10 @@ func (c *Configurator) WithOptions(opts ...cfg.Option) cfg.Configurator {
 		InitialConfigurator: c.initialConfigurator().WithOptions(opts...),
 	}
 }
+
+func (c *Configurator) Prefixed(prefix string, overrides map[string]string) cfg.Configurator {
+	return &Configurator{
+		Stages:              c.Stages,
+		InitialConfigurator: c.initialConfigurator().Prefixed(prefix, overrides),
+	}
+}
