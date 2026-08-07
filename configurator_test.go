@@ -1072,3 +1072,5 @@ func ExampleNewDefaultConfigurator() {
 	// Output:
 	// bar
 }
+
+
