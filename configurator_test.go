@@ -18,6 +18,7 @@ import (
 	"github.com/upfluence/cfg/internal/walker"
 	"github.com/upfluence/cfg/provider"
 	dflt "github.com/upfluence/cfg/provider/default"
+	pjson "github.com/upfluence/cfg/provider/json"
 )
 
 var (
@@ -800,6 +801,20 @@ func TestConfigurator(t *testing.T) {
 			dataAssertion: deepEqual(&sliceStructConfig{}),
 			errAssertion:  noError,
 		},
+		{
+			caseName: "unmarshaler-struct-fields-not-walked",
+			input:    &unmarshalerFieldsStruct{},
+			provider: pjson.NewProviderFromReader(
+				strings.NewReader(`{"value":"cds://foo","value_ptr":"https://bar"}`),
+			),
+			dataAssertion: deepEqual(
+				&unmarshalerFieldsStruct{
+					Value:    textValue{Scheme: "cds", Host: "foo"},
+					ValuePtr: &textValue{Scheme: "https", Host: "bar"},
+				},
+			),
+			errAssertion: noError,
+		},
 	} {
 		t.Run(
 			tCase.caseName,
@@ -1073,4 +1088,18 @@ func ExampleNewDefaultConfigurator() {
 	// bar
 }
 
+type textValue struct {
+	Scheme string
+	Host   string
+}
 
+func (tv *textValue) UnmarshalText(buf []byte) error {
+	tv.Scheme, tv.Host, _ = strings.Cut(string(buf), "://")
+
+	return nil
+}
+
+type unmarshalerFieldsStruct struct {
+	Value    textValue  `json:"value"`
+	ValuePtr *textValue `json:"value_ptr"`
+}

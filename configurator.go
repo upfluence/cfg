@@ -192,7 +192,7 @@ func (c *configurator) walkFunc(ctx context.Context, f *walker.Field) error {
 		return &RequiredError{Field: f.Field}
 	}
 
-	if setter.IsUnmarshaler(f.Value.Type()) {
+	if setter.IsUnmarshaler(f.Field.Type) {
 		return walker.SkipStruct
 	}
 
