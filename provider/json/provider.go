@@ -42,6 +42,12 @@ func NewProviderFromReaderAndDecoder(r io.Reader, fn DecodeFunc) provider.Provid
 
 func (*Provider) StructTag() string { return "json" }
 
+func (*Provider) DefaultFieldValue(fieldName string) string { return fieldName }
+
+func (*Provider) JoinFieldKeys(prefix, key string) string {
+	return prefix + "." + key
+}
+
 func (p *Provider) Provide(_ context.Context, v string) (string, bool, error) {
 	var (
 		cur         = p.store

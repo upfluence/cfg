@@ -8,6 +8,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/upfluence/cfg"
 )
 
 func TestProvider_Provide(t *testing.T) {
@@ -128,6 +130,71 @@ func TestProvider_SubKeys(t *testing.T) {
 
 			sort.Strings(got)
 			sort.Strings(tc.want)
+			assert.Equal(t, tc.want, got)
+		})
+	}
+}
+
+type populateShard struct {
+	Host string   `json:"host"`
+	Tags []string `json:"tags"`
+}
+
+type populateConfig struct {
+	Name   string                   `json:"name"`
+	Shards map[string]populateShard `json:"shards"`
+}
+
+type populateRoot struct {
+	DB populateConfig `json:""`
+
+	Region string `json:"region"`
+}
+
+func TestProvider_Populate(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		haveJSON string
+		want     populateRoot
+	}{
+		{
+			name:     "empty store",
+			haveJSON: `{}`,
+		},
+		{
+			name: "map of structs under an empty json tag",
+			haveJSON: `{
+				"region": "us-east-1",
+				"name": "db",
+				"shards": {
+					"primary": {"host": "h1", "tags": ["a", "b"]},
+					"replica": {"host": "h2"}
+				}
+			}`,
+			want: populateRoot{
+				DB: populateConfig{
+					Name: "db",
+					Shards: map[string]populateShard{
+						"primary": {Host: "h1", Tags: []string{"a", "b"}},
+						"replica": {Host: "h2"},
+					},
+				},
+				Region: "us-east-1",
+			},
+		},
+		{
+			name:     "empty json tag does not read a prefixed key",
+			haveJSON: `{"DB": {"name": "db"}}`,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var got populateRoot
+
+			err := cfg.NewConfigurator(
+				NewProviderFromReader(strings.NewReader(tc.haveJSON)),
+			).Populate(context.Background(), &got)
+
+			require.NoError(t, err)
 			assert.Equal(t, tc.want, got)
 		})
 	}
